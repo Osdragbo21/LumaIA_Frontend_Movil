@@ -6,6 +6,7 @@ import { apiClient } from '../config/api.client';
 export interface ConsultarAsistenteInput {
   usuario_id: string;
   pregunta_id: string;
+  modelo?: string; // <-- NUEVO: Parámetro opcional
 }
 
 const handleGraphQLError = (error: unknown) => {
@@ -18,9 +19,10 @@ const handleGraphQLError = (error: unknown) => {
 export const consultarAsistente = async (input: ConsultarAsistenteInput): Promise<string> => {
   if (!input.usuario_id) throw new Error("Sesión inactiva.");
 
+  // NUEVO: Agregamos el parámetro a la mutación GraphQL
   const mutation = `
-    mutation ConsultarAsistente($usuario_id: ID!, $pregunta_id: String!) {
-      consultarAsistente(usuario_id: $usuario_id, pregunta_id: $pregunta_id)
+    mutation ConsultarAsistente($usuario_id: ID!, $pregunta_id: String!, $modelo: String) {
+      consultarAsistente(usuario_id: $usuario_id, pregunta_id: $pregunta_id, modelo: $modelo)
     }
   `;
 
