@@ -3,8 +3,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Mic, CalendarDays, PhoneCall } from 'lucide-react-native';
-import { useAppTheme } from '../store/useThemeStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppTheme } from '../store/useThemeStore';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { AgendaScreen } from '../screens/AgendaScreen';
@@ -14,6 +15,7 @@ const Tab = createBottomTabNavigator();
 
 export const MainNavigator = () => {
   const { colors, typography } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -25,8 +27,8 @@ export const MainNavigator = () => {
           backgroundColor: colors.surface,
           borderTopWidth: 2,
           borderTopColor: colors.border,
-          height: 70, 
-          paddingBottom: 10,
+          height: 70 + insets.bottom, // Sumamos el margen inferior seguro
+          paddingBottom: 10 + insets.bottom, // Elevamos los iconos respetando el notch/gestos
           paddingTop: 10,
         },
         tabBarLabelStyle: {
