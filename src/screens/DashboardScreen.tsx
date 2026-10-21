@@ -1,30 +1,28 @@
 // [MÓVIL] Ruta: src/screens/DashboardScreen.tsx
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pill, Stethoscope, Check, LogOut, AlertCircle, Phone, Clock } from 'lucide-react-native';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppTheme } from '../store/useThemeStore';
 import { obtenerMedicamentos } from '../services/medicamentos.service';
 import { obtenerCitas } from '../services/citas.service';
-import { confirmarToma } from '../services/registros-toma.service';
+import { obtenerTomasHoy, confirmarToma } from '../services/registros-toma.service';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { rol, usuarioId, logout } = useAuthStore();
   const { colors, typography } = useAppTheme();
-  
-  const [tomasConfirmadas, setTomasConfirmadas] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
-  const handleLogout = () => {
-    logout();
-  };
+  const handleLogout = () => logout();
 
   const fechaGenerada = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
   const fechaFormateada = fechaGenerada.split(', ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(', ');
 
+  // 1. QUERIES REALES
   const { data: medicamentos = [], isLoading: loadMed, isError: errMed } = useQuery({
     queryKey: ['medicamentos', usuarioId],
     queryFn: () => obtenerMedicamentos(usuarioId!),
@@ -37,14 +35,26 @@ export const DashboardScreen = ({ navigation }: any) => {
     enabled: !!usuarioId,
   });
 
+  // NUEVA QUERY: Obtenemos las tomas confirmadas de hoy desde MongoDB
+  const { data: tomasHoy = [], isLoading: loadTomas } = useQuery({
+    queryKey: ['tomasHoy', usuarioId],
+    queryFn: () => obtenerTomasHoy(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  // Convertimos el arreglo de tomas de hoy en un Set (buscando por medicamento_id) para validación rápida O(1)
+  const idsConfirmados = new Set(tomasHoy.map((toma: any) => toma.medicamento_id));
+
+  // 2. MUTACIÓN (Actualizada para invalidar caché)
   const mutationToma = useMutation({
     mutationFn: (medicamento_id: string) => confirmarToma(medicamento_id),
-    onSuccess: (_, variables) => {
-      setTomasConfirmadas(prev => new Set(prev).add(variables));
+    onSuccess: () => {
+      // Obliga a React Query a volver a ejecutar "obtenerTomasHoy", actualizando la UI de inmediato y asegurando la BD.
+      queryClient.invalidateQueries({ queryKey: ['tomasHoy', usuarioId] });
     }
   });
 
-  const isLoading = loadMed || loadCitas;
+  const isLoading = loadMed || loadCitas || loadTomas;
   const isError = errMed || errCitas;
 
   const hoy = new Date();
@@ -54,7 +64,7 @@ export const DashboardScreen = ({ navigation }: any) => {
   });
 
   const handleConfirmarToma = (id: string) => {
-    if (!tomasConfirmadas.has(id)) {
+    if (!idsConfirmados.has(id)) {
       mutationToma.mutate(id);
     }
   };
@@ -63,10 +73,9 @@ export const DashboardScreen = ({ navigation }: any) => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={styles.container}>
         
-        {/* HEADER CON LOGO OFICIAL */}
+        {/* HEADER CON LOGO */}
         <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.headerLeft}>
-            {/* LOGO DE LUMA */}
             <Image 
               source={require('../../assets/logo_LumaIA.png')} 
               style={{ width: 60, height: 60, resizeMode: 'contain', marginRight: 12 }} 
@@ -102,7 +111,6 @@ export const DashboardScreen = ({ navigation }: any) => {
           </Text>
         </View>
 
-        {/* LOADING / ERROR */}
         {isLoading && (
           <View style={[styles.emptyCard, { borderColor: colors.border }]}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -119,12 +127,14 @@ export const DashboardScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        {/* LISTAS */}
         {!isLoading && !isError && (
           <View style={styles.listContainer}>
+            
             {/* MEDICAMENTOS */}
             {medicamentos.map((med) => {
-              const isConfirmado = tomasConfirmadas.has(med._id);
+              // Validamos el estado real contra la base de datos
+              const isConfirmado = idsConfirmados.has(med._id);
+              
               const cardBg = isConfirmado ? colors.successLight : colors.surface;
               const cardBorder = isConfirmado ? colors.success : colors.border;
               
