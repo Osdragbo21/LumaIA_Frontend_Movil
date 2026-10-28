@@ -24,14 +24,12 @@ export const AgendaScreen = () => {
   const [filtro, setFiltro] = useState<FiltroType>('Todo');
   const [modalVisible, setModalVisible] = useState<ModalState>('none');
 
-  // ESTADOS: FORMULARIO MEDICAMENTO
   const [medNombre, setMedNombre] = useState('');
   const [medDosis, setMedDosis] = useState('');
   const [medFrecuencia, setMedFrecuencia] = useState('');
   const [medPrimeraToma, setMedPrimeraToma] = useState(new Date());
   const [showMedTimePicker, setShowMedTimePicker] = useState(false);
 
-  // ESTADOS: FORMULARIO CITA
   const [citaTitulo, setCitaTitulo] = useState('');
   const [citaUbicacion, setCitaUbicacion] = useState('');
   const [citaFechaObj, setCitaFechaObj] = useState(new Date());
@@ -39,16 +37,13 @@ export const AgendaScreen = () => {
   const [showCitaDatePicker, setShowCitaDatePicker] = useState(false);
   const [showCitaTimePicker, setShowCitaTimePicker] = useState(false);
 
-  // ESTADOS: FORMULARIO NOTA
   const [notaContenido, setNotaContenido] = useState('');
 
-  // 1. QUERIES
   const { data: medicamentos = [], isLoading: loadMed } = useQuery({ queryKey: ['medicamentos', usuarioId], queryFn: () => obtenerMedicamentos(usuarioId!), enabled: !!usuarioId });
   const { data: citas = [], isLoading: loadCitas } = useQuery({ queryKey: ['citas', usuarioId], queryFn: () => obtenerCitas(usuarioId!), enabled: !!usuarioId });
   const { data: notas = [], isLoading: loadNotas } = useQuery({ queryKey: ['notas', usuarioId], queryFn: () => obtenerNotas(usuarioId!), enabled: !!usuarioId });
 
   const isLoading = loadMed || loadCitas || loadNotas;
-
   const mostrarCitas = filtro === 'Todo' || filtro === 'Citas';
   const mostrarMedicamentos = filtro === 'Todo' || filtro === 'Medicamentos';
   const mostrarNotas = filtro === 'Todo' || filtro === 'Notas';
@@ -60,99 +55,55 @@ export const AgendaScreen = () => {
     (filtro === 'Todo' && citas.length === 0 && medicamentos.length === 0 && notas.length === 0))
   );
 
-  // 2. MUTACIONES
   const mutMed = useMutation({
     mutationFn: () => {
-      // Formatear HH:MM seguro
       const hh = medPrimeraToma.getHours().toString().padStart(2, '0');
       const mm = medPrimeraToma.getMinutes().toString().padStart(2, '0');
-      const horaFormateada = `${hh}:${mm}`;
-
-      return crearMedicamento({ 
-        usuario_id: usuarioId!, 
-        nombre_farmaco: medNombre.trim(), 
-        dosis: medDosis.trim(), 
-        frecuencia_horas: parseInt(medFrecuencia) || 24, 
-        horarios_especificos: [horaFormateada] 
-      });
+      return crearMedicamento({ usuario_id: usuarioId!, nombre_farmaco: medNombre.trim(), dosis: medDosis.trim(), frecuencia_horas: parseInt(medFrecuencia) || 24, horarios_especificos: [`${hh}:${mm}`] });
     },
     onSuccess: () => resetAndClose('¡Medicamento guardado con éxito!', 'medicamentos')
   });
 
   const mutCita = useMutation({
     mutationFn: () => {
-      // Combinar Fecha y Hora en un solo objeto ISO
-      const isoDate = new Date(
-        citaFechaObj.getFullYear(),
-        citaFechaObj.getMonth(),
-        citaFechaObj.getDate(),
-        citaHoraObj.getHours(),
-        citaHoraObj.getMinutes()
-      ).toISOString();
-
-      return crearCita({ 
-        usuario_id: usuarioId!, 
-        titulo_evento: citaTitulo.trim(), 
-        fecha_hora: isoDate, 
-        ubicacion: citaUbicacion.trim() 
-      });
+      const isoDate = new Date(citaFechaObj.getFullYear(), citaFechaObj.getMonth(), citaFechaObj.getDate(), citaHoraObj.getHours(), citaHoraObj.getMinutes()).toISOString();
+      return crearCita({ usuario_id: usuarioId!, titulo_evento: citaTitulo.trim(), fecha_hora: isoDate, ubicacion: citaUbicacion.trim() });
     },
     onSuccess: () => resetAndClose('¡Cita programada con éxito!', 'citas')
   });
 
   const mutNota = useMutation({
-    mutationFn: () => crearNota({ 
-      usuario_id: usuarioId!, 
-      contenido: notaContenido.trim(), 
-      fecha_creacion: new Date().toISOString() 
-    }),
+    mutationFn: () => crearNota({ usuario_id: usuarioId!, contenido: notaContenido.trim(), fecha_creacion: new Date().toISOString() }),
     onSuccess: () => resetAndClose('¡Apunte guardado con éxito!', 'notas')
   });
 
   const resetAndClose = (mensaje: string, queryKey: string) => {
     Alert.alert('Éxito', mensaje);
     setModalVisible('none');
-    
-    // Limpieza de estados
     setMedNombre(''); setMedDosis(''); setMedFrecuencia(''); setMedPrimeraToma(new Date());
     setCitaTitulo(''); setCitaUbicacion(''); setCitaFechaObj(new Date()); setCitaHoraObj(new Date());
     setNotaContenido('');
-    
-    // Invalida caché para actualización en tiempo real
     queryClient.invalidateQueries({ queryKey: [queryKey, usuarioId] });
   };
 
-  // Manejadores de los Pickers
   const onChangeMedTime = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowMedTimePicker(false);
     if (selectedDate) setMedPrimeraToma(selectedDate);
   };
-
   const onChangeCitaDate = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowCitaDatePicker(false);
     if (selectedDate) setCitaFechaObj(selectedDate);
   };
-
   const onChangeCitaTime = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowCitaTimePicker(false);
     if (selectedDate) setCitaHoraObj(selectedDate);
   };
 
-  // Formateadores de UI
-  const formatTimeUI = (date: Date) => {
-    const hh = date.getHours().toString().padStart(2, '0');
-    const mm = date.getMinutes().toString().padStart(2, '0');
-    return `${hh}:${mm}`;
-  };
-
-  const formatDateUI = (date: Date) => {
-    return date.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  const formatTimeUI = (date: Date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  const formatDateUI = (date: Date) => date.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      
-      {/* CABECERA Y FILTROS */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Mi Agenda</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
@@ -175,14 +126,10 @@ export const AgendaScreen = () => {
 
         {!isLoading && (
           <View style={styles.listContainer}>
-            
-            {/* LISTA DE CITAS */}
             {mostrarCitas && citas.map((cita) => (
               <View key={cita._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.warning }]}>
                 <View style={styles.cardHeader}>
-                  <View style={[styles.iconBox, { backgroundColor: colors.warning + '15' }]}>
-                    <Stethoscope color={colors.warning} size={32} />
-                  </View>
+                  <View style={[styles.iconBox, { backgroundColor: colors.warning + '15' }]}><Stethoscope color={colors.warning} size={32} /></View>
                   <View style={styles.cardInfo}>
                     <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{cita.titulo_evento}</Text>
                     <View style={styles.badgeContainer}><Text style={[styles.badgeText, { color: colors.warning, fontSize: typography.sm }]}>CITA MÉDICA</Text></View>
@@ -191,9 +138,7 @@ export const AgendaScreen = () => {
                 <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
                   <View style={styles.detailRow}>
                     <Calendar color={colors.textSecondary} size={20} />
-                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base }]}>
-                      {new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })} a las {new Date(cita.fecha_hora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
+                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base }]}>{new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })} a las {new Date(cita.fecha_hora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</Text>
                   </View>
                   {cita.ubicacion && (
                     <View style={[styles.detailRow, { marginTop: 8 }]}>
@@ -205,13 +150,10 @@ export const AgendaScreen = () => {
               </View>
             ))}
 
-            {/* LISTA DE MEDICAMENTOS */}
             {mostrarMedicamentos && medicamentos.map((med) => (
               <View key={med._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.primary }]}>
                 <View style={styles.cardHeader}>
-                  <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}>
-                    <Pill color={colors.primary} size={32} />
-                  </View>
+                  <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}><Pill color={colors.primary} size={32} /></View>
                   <View style={styles.cardInfo}>
                     <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{med.nombre_farmaco}</Text>
                     <View style={styles.badgeContainerPrimary}><Text style={[styles.badgeTextPrimary, { color: colors.primary, fontSize: typography.sm }]}>MEDICAMENTO</Text></View>
@@ -220,9 +162,7 @@ export const AgendaScreen = () => {
                 <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
                   <View style={styles.detailRow}>
                     <Clock color={colors.textSecondary} size={20} />
-                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }]}>
-                      A las {med.horarios_especificos?.join(', ')} • Cada {med.frecuencia_horas} hrs
-                    </Text>
+                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }]}>A las {med.horarios_especificos?.join(', ')} • Cada {med.frecuencia_horas} hrs</Text>
                   </View>
                   <View style={[styles.detailRow, { marginTop: 8 }]}>
                     <CheckCircle color={colors.textSecondary} size={20} />
@@ -232,13 +172,10 @@ export const AgendaScreen = () => {
               </View>
             ))}
 
-            {/* LISTA DE NOTAS */}
             {mostrarNotas && notas.map((nota) => (
               <View key={nota._id} style={[styles.card, { backgroundColor: '#fefce8', borderColor: '#fde047', borderLeftColor: '#eab308' }]}>
                 <View style={styles.cardHeader}>
-                  <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}>
-                    <StickyNote color="#ca8a04" size={32} />
-                  </View>
+                  <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}><StickyNote color="#ca8a04" size={32} /></View>
                   <View style={styles.cardInfo}>
                     <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{nota.contenido}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: typography.sm, marginTop: 4 }}>{new Date(nota.fecha_creacion).toLocaleDateString('es-MX')}</Text>
@@ -247,7 +184,6 @@ export const AgendaScreen = () => {
               </View>
             ))}
 
-            {/* ESTADO VACÍO */}
             {emptyState && (
               <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                 <View style={{ backgroundColor: colors.background, padding: 20, borderRadius: 100, marginBottom: 16 }}><Calendar color={colors.textSecondary} size={48} /></View>
@@ -255,21 +191,14 @@ export const AgendaScreen = () => {
                 <Text style={{ fontSize: typography.lg, color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>No tienes eventos registrados para este filtro.</Text>
               </View>
             )}
-
           </View>
         )}
       </ScrollView>
 
-      {/* FAB - FLOATING ACTION BUTTON */}
-      <TouchableOpacity 
-        style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
-        activeOpacity={0.8}
-        onPress={() => setModalVisible('menu')}
-      >
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]} activeOpacity={0.8} onPress={() => setModalVisible('menu')}>
         <Plus color="#ffffff" size={36} strokeWidth={3} />
       </TouchableOpacity>
 
-      {/* MODAL MAESTRO */}
       <Modal animationType="slide" transparent={true} visible={modalVisible !== 'none'} onRequestClose={() => setModalVisible('none')}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={styles.modalOverlay}>
@@ -289,9 +218,8 @@ export const AgendaScreen = () => {
 
               <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 
-                {/* MENU PRINCIPAL */}
                 {modalVisible === 'menu' && (
-                  <>
+                  <View>
                     <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('medicamento')}>
                       <View style={[styles.menuIconBox, { backgroundColor: colors.primaryLight }]}><Pill color={colors.primary} size={32} /></View>
                       <Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Medicamento</Text>
@@ -304,10 +232,9 @@ export const AgendaScreen = () => {
                       <View style={[styles.menuIconBox, { backgroundColor: '#fef08a' }]}><StickyNote color="#ca8a04" size={32} /></View>
                       <Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Nota Personal</Text>
                     </TouchableOpacity>
-                  </>
+                  </View>
                 )}
 
-                {/* FORMULARIO MEDICAMENTO */}
                 {modalVisible === 'medicamento' && (
                   <View style={{ paddingBottom: 20 }}>
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Nombre del Fármaco</Text>
@@ -319,19 +246,12 @@ export const AgendaScreen = () => {
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Frecuencia (Cada cuántas horas)</Text>
                     <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. 8" keyboardType="numeric" placeholderTextColor={colors.textSecondary} value={medFrecuencia} onChangeText={setMedFrecuencia} />
                     
-                    {/* HORA ACCESIBLE */}
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>¿A qué hora es la primera toma?</Text>
-                    <TouchableOpacity 
-                      style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} 
-                      onPress={() => setShowMedTimePicker(true)}
-                    >
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowMedTimePicker(true)}>
                       <Clock color={colors.primary} size={24} style={{ marginRight: 12 }} />
                       <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>{formatTimeUI(medPrimeraToma)}</Text>
                     </TouchableOpacity>
-
-                    {showMedTimePicker && (
-                      <DateTimePicker value={medPrimeraToma} mode="time" display="default" onChange={onChangeMedTime} />
-                    )}
+                    {showMedTimePicker && (<DateTimePicker value={medPrimeraToma} mode="time" display="default" onChange={onChangeMedTime} />)}
 
                     <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutMed.isPending ? 0.7 : 1 }]} onPress={() => mutMed.mutate()} disabled={mutMed.isPending || !medNombre || !medDosis}>
                       {mutMed.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Guardar</Text>}
@@ -339,39 +259,24 @@ export const AgendaScreen = () => {
                   </View>
                 )}
 
-                {/* FORMULARIO CITA */}
                 {modalVisible === 'cita' && (
                   <View style={{ paddingBottom: 20 }}>
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Motivo o Especialidad</Text>
                     <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Cardiólogo" placeholderTextColor={colors.textSecondary} value={citaTitulo} onChangeText={setCitaTitulo} />
                     
-                    {/* FECHA ACCESIBLE */}
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Día de la cita</Text>
-                    <TouchableOpacity 
-                      style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} 
-                      onPress={() => setShowCitaDatePicker(true)}
-                    >
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowCitaDatePicker(true)}>
                       <Calendar color={colors.warning} size={24} style={{ marginRight: 12 }} />
                       <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold', textTransform: 'capitalize' }}>{formatDateUI(citaFechaObj)}</Text>
                     </TouchableOpacity>
+                    {showCitaDatePicker && (<DateTimePicker value={citaFechaObj} mode="date" display="default" minimumDate={new Date()} onChange={onChangeCitaDate} />)}
 
-                    {showCitaDatePicker && (
-                      <DateTimePicker value={citaFechaObj} mode="date" display="default" minimumDate={new Date()} onChange={onChangeCitaDate} />
-                    )}
-
-                    {/* HORA ACCESIBLE */}
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Hora</Text>
-                    <TouchableOpacity 
-                      style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} 
-                      onPress={() => setShowCitaTimePicker(true)}
-                    >
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowCitaTimePicker(true)}>
                       <Clock color={colors.warning} size={24} style={{ marginRight: 12 }} />
                       <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>{formatTimeUI(citaHoraObj)}</Text>
                     </TouchableOpacity>
-
-                    {showCitaTimePicker && (
-                      <DateTimePicker value={citaHoraObj} mode="time" display="default" onChange={onChangeCitaTime} />
-                    )}
+                    {showCitaTimePicker && (<DateTimePicker value={citaHoraObj} mode="time" display="default" onChange={onChangeCitaTime} />)}
 
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Ubicación (Opcional)</Text>
                     <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Clínica Centro" placeholderTextColor={colors.textSecondary} value={citaUbicacion} onChangeText={setCitaUbicacion} />
@@ -382,7 +287,6 @@ export const AgendaScreen = () => {
                   </View>
                 )}
 
-                {/* FORMULARIO NOTA */}
                 {modalVisible === 'nota' && (
                   <View style={{ paddingBottom: 20 }}>
                     <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>¿Qué deseas recordar?</Text>
@@ -399,7 +303,6 @@ export const AgendaScreen = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
     </SafeAreaView>
   );
 };

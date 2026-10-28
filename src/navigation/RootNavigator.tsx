@@ -4,6 +4,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/useAuthStore';
 import { MainNavigator } from './MainNavigator';
+import { CuidadorNavigator } from './CuidadorNavigator';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 
@@ -18,12 +19,16 @@ const AuthNavigator = () => (
 );
 
 export const RootNavigator = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { isAuthenticated, rol } = useAuthStore();
 
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated ? (
-        <RootStack.Screen name="Main" component={MainNavigator} />
+        rol === 'Cuidador' ? (
+          <RootStack.Screen name="Cuidador" component={CuidadorNavigator} />
+        ) : (
+          <RootStack.Screen name="Main" component={MainNavigator} />
+        )
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
       )}

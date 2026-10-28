@@ -1,0 +1,3439 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+
+================================================================
+Directory Structure
+================================================================
+assets/
+  logo_LumaIA.png
+src/
+  config/
+    api.client.ts
+  navigation/
+    CuidadorNavigator.tsx
+    MainNavigator.tsx
+    RootNavigator.tsx
+  screens/
+    AgendaScreen.tsx
+    ApoyoScreen.tsx
+    ChatScreen.tsx
+    CuidadorDashboardScreen.tsx
+    CuidadorEstadisticasScreen.tsx
+    CuidadorGestionScreen.tsx
+    CuidadorVinculacionScreen.tsx
+    DashboardScreen.tsx
+    LoginScreen.tsx
+    RegisterScreen.tsx
+  services/
+    auth.service.ts
+    citas.service.ts
+    contactos.service.ts
+    cuidador.service.ts
+    ia.service.ts
+    medicamentos.service.ts
+    notas.service.ts
+    registros-toma.service.ts
+    usuarios.service.ts
+  store/
+    useAuthStore.ts
+    useThemeStore.ts
+  types/
+    index.ts
+.gitignore
+AGENTS.md
+app.json
+App.tsx
+index.ts
+LICENSE
+package.json
+README.md
+tsconfig.json
+
+================================================================
+Files
+================================================================
+
+================
+File: src/navigation/CuidadorNavigator.tsx
+================
+// [MÓVIL] Ruta: src/navigation/CuidadorNavigator.tsx
+
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Activity, BarChart2, ClipboardList, Users } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useAppTheme } from '../store/useThemeStore';
+import { CuidadorDashboardScreen } from '../screens/CuidadorDashboardScreen';
+import { CuidadorEstadisticasScreen } from '../screens/CuidadorEstadisticasScreen';
+import { CuidadorGestionScreen } from '../screens/CuidadorGestionScreen';
+import { CuidadorVinculacionScreen } from '../screens/CuidadorVinculacionScreen';
+
+const Tab = createBottomTabNavigator();
+
+export const CuidadorNavigator = () => {
+  const { colors, typography } = useAppTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopWidth: 2,
+          borderTopColor: colors.border,
+          height: 70 + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
+          paddingTop: 10,
+        },
+        tabBarLabelStyle: { fontSize: typography.xs, fontWeight: 'bold' },
+      }}
+    >
+      <Tab.Screen name="Monitoreo" component={CuidadorDashboardScreen} options={{ tabBarIcon: ({ color, size }) => <Activity color={color} size={size + 4} /> }} />
+      <Tab.Screen name="Estadísticas" component={CuidadorEstadisticasScreen} options={{ tabBarIcon: ({ color, size }) => <BarChart2 color={color} size={size + 4} /> }} />
+      <Tab.Screen name="Gestión" component={CuidadorGestionScreen} options={{ tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size + 4} /> }} />
+      <Tab.Screen name="Vinculados" component={CuidadorVinculacionScreen} options={{ tabBarIcon: ({ color, size }) => <Users color={color} size={size + 4} /> }} />
+    </Tab.Navigator>
+  );
+};
+
+================
+File: src/screens/CuidadorDashboardScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/CuidadorDashboardScreen.tsx
+
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
+import { LogOut, Activity, Pill, Stethoscope, AlertCircle } from 'lucide-react-native';
+
+import { useAuthStore } from '../store/useAuthStore';
+import { useAppTheme } from '../store/useThemeStore';
+import { obtenerAdultosVinculados } from '../services/cuidador.service';
+
+export const CuidadorDashboardScreen = () => {
+  const { usuarioId, logout } = useAuthStore();
+  const { colors, typography } = useAppTheme();
+
+  const { data: vinculados = [], isLoading, isError } = useQuery({
+    queryKey: ['vinculadosResumen', usuarioId],
+    queryFn: () => obtenerAdultosVinculados(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        
+        <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            <Image source={require('../../assets/logo_LumaIA.png')} style={{ width: 60, height: 60, resizeMode: 'contain', marginRight: 12 }} />
+            <View>
+              <Text style={[styles.welcomeText, { color: colors.textSecondary, fontSize: typography.xs }]}>PORTAL CUIDADOR</Text>
+              <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary }}>Monitoreo</Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+            <LogOut color={colors.danger} size={28} />
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <View style={[styles.emptyCard, { borderColor: colors.border }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: typography.base, marginTop: 16 }}>Sincronizando estado...</Text>
+          </View>
+        ) : isError ? (
+          <View style={[styles.errorCard, { backgroundColor: '#ffe4e6', borderColor: colors.danger }]}>
+            <AlertCircle color={colors.danger} size={32} />
+            <Text style={{ color: colors.danger, fontSize: typography.base, marginLeft: 12, flex: 1, fontWeight: 'bold' }}>Error de conexión.</Text>
+          </View>
+        ) : vinculados.length === 0 ? (
+          <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary }}>Bienvenido</Text>
+            <Text style={{ fontSize: typography.base, color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>Aún no tienes pacientes vinculados. Ve a la pestaña "Vinculados" para agregar uno.</Text>
+          </View>
+        ) : (
+          <View style={styles.listContainer}>
+            {vinculados.map((item) => {
+              // Calcular adherencia simple basada en meds activos (No es exacta por frecuencia, pero útil para UI)
+              const medsTotales = item.medicamentos.length;
+              const tomasUnicasHoy = new Set(item.tomas_hoy.map(t => t.medicamento_id)).size;
+              const alDia = tomasUnicasHoy >= medsTotales && medsTotales > 0;
+
+              return (
+                <View key={item.adulto._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.cardHeader}>
+                    <View style={[styles.avatarBox, { backgroundColor: colors.primaryLight }]}><Text style={{ color: colors.primary, fontSize: typography.h2, fontWeight: '900' }}>{item.adulto.nombre.charAt(0)}</Text></View>
+                    <View style={styles.cardInfo}>
+                      <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.h2 }]}>{item.adulto.nombre}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: alDia ? colors.successLight : '#fff1f2', borderColor: alDia ? colors.success : colors.danger }]}>
+                        <Activity color={alDia ? colors.success : colors.danger} size={16} />
+                        <Text style={{ color: alDia ? colors.success : colors.danger, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 4 }}>{alDia ? 'Al Día' : 'Atención Pendiente'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
+                    <View style={styles.detailRow}>
+                      <Pill color={colors.primary} size={24} />
+                      <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.lg }]}>Tomadas hoy: <Text style={{ color: colors.primary, fontWeight: '900' }}>{tomasUnicasHoy} de {medsTotales}</Text></Text>
+                    </View>
+                    <View style={[styles.detailRow, { marginTop: 12 }]}>
+                      <Stethoscope color={colors.warning} size={24} />
+                      <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.lg }]}>Citas hoy: <Text style={{ color: colors.warning, fontWeight: '900' }}>{item.citas_hoy.length}</Text></Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { padding: 20, paddingBottom: 40 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 24, borderWidth: 2, marginBottom: 24 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  welcomeText: { fontWeight: 'bold', letterSpacing: 1, marginBottom: 2 },
+  logoutBtn: { padding: 8, backgroundColor: '#ffe4e6', borderRadius: 16 },
+  listContainer: { gap: 16 },
+  card: { borderRadius: 24, borderWidth: 2, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', padding: 20, alignItems: 'center' },
+  avatarBox: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  cardInfo: { flex: 1 },
+  cardTitle: { fontWeight: '900', marginBottom: 6 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100, borderWidth: 1 },
+  cardDetails: { padding: 20, paddingTop: 16, borderTopWidth: 2, backgroundColor: '#fafafa' },
+  detailRow: { flexDirection: 'row', alignItems: 'center' },
+  detailText: { marginLeft: 12, fontWeight: '600' },
+  emptyCard: { padding: 40, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center' },
+  errorCard: { padding: 20, borderRadius: 24, borderWidth: 2, flexDirection: 'row', alignItems: 'center' }
+});
+
+================
+File: src/screens/CuidadorEstadisticasScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/CuidadorEstadisticasScreen.tsx
+
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme } from '../store/useThemeStore';
+
+export const CuidadorEstadisticasScreen = () => {
+  const { colors, typography } = useAppTheme();
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Estadísticas</Text>
+      </View>
+      <View style={styles.centerContainer}>
+        <Text style={{ fontSize: typography.xl, color: colors.textSecondary, fontWeight: 'bold' }}>Módulo de Algoritmos</Text>
+        <Text style={{ fontSize: typography.base, color: colors.textSecondary, marginTop: 8 }}>En desarrollo...</Text>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  header: { padding: 20, paddingBottom: 16, borderBottomWidth: 2 },
+  headerTitle: { fontWeight: '900' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' }
+});
+
+================
+File: src/screens/CuidadorGestionScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/CuidadorGestionScreen.tsx
+
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar, MapPin, Clock, Pill, Stethoscope, CheckCircle, Plus, StickyNote, X } from 'lucide-react-native';
+
+import { useAuthStore } from '../store/useAuthStore';
+import { useAppTheme } from '../store/useThemeStore';
+import { obtenerAdultosVinculados } from '../services/cuidador.service';
+import { obtenerMedicamentos, crearMedicamento } from '../services/medicamentos.service';
+import { obtenerCitas, crearCita } from '../services/citas.service';
+import { obtenerNotas, crearNota } from '../services/notas.service';
+
+type ModalState = 'none' | 'menu' | 'medicamento' | 'cita' | 'nota';
+
+export const CuidadorGestionScreen = () => {
+  const { usuarioId } = useAuthStore();
+  const { colors, typography } = useAppTheme();
+  const queryClient = useQueryClient();
+  
+  const [selectedAdultoId, setSelectedAdultoId] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState<ModalState>('none');
+
+  // Estados Formulario Medicamento
+  const [medNombre, setMedNombre] = useState('');
+  const [medDosis, setMedDosis] = useState('');
+  const [medFrecuencia, setMedFrecuencia] = useState('');
+  const [medPrimeraToma, setMedPrimeraToma] = useState(new Date());
+  const [showMedTimePicker, setShowMedTimePicker] = useState(false);
+
+  // Estados Formulario Cita
+  const [citaTitulo, setCitaTitulo] = useState('');
+  const [citaUbicacion, setCitaUbicacion] = useState('');
+  const [citaFechaObj, setCitaFechaObj] = useState(new Date());
+  const [citaHoraObj, setCitaHoraObj] = useState(new Date());
+  const [showCitaDatePicker, setShowCitaDatePicker] = useState(false);
+  const [showCitaTimePicker, setShowCitaTimePicker] = useState(false);
+
+  // Estados Formulario Nota
+  const [notaContenido, setNotaContenido] = useState('');
+
+  // Queries
+  const { data: vinculados = [], isLoading: loadVinculados } = useQuery({
+    queryKey: ['vinculadosList', usuarioId],
+    queryFn: () => obtenerAdultosVinculados(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  // Autoseleccionar el primero si no hay seleccionado
+  if (!selectedAdultoId && vinculados.length > 0) {
+    setSelectedAdultoId(vinculados[0].adulto._id);
+  }
+
+  const { data: medicamentos = [], isLoading: loadMed } = useQuery({ queryKey: ['medicamentos', selectedAdultoId], queryFn: () => obtenerMedicamentos(selectedAdultoId!), enabled: !!selectedAdultoId });
+  const { data: citas = [], isLoading: loadCitas } = useQuery({ queryKey: ['citas', selectedAdultoId], queryFn: () => obtenerCitas(selectedAdultoId!), enabled: !!selectedAdultoId });
+  const { data: notas = [], isLoading: loadNotas } = useQuery({ queryKey: ['notas', selectedAdultoId], queryFn: () => obtenerNotas(selectedAdultoId!), enabled: !!selectedAdultoId });
+
+  const isLoading = loadVinculados || loadMed || loadCitas || loadNotas;
+
+  // Mutaciones (usando el ID del adulto seleccionado)
+  const mutMed = useMutation({
+    mutationFn: () => {
+      const hh = medPrimeraToma.getHours().toString().padStart(2, '0');
+      const mm = medPrimeraToma.getMinutes().toString().padStart(2, '0');
+      return crearMedicamento({ usuario_id: selectedAdultoId!, nombre_farmaco: medNombre.trim(), dosis: medDosis.trim(), frecuencia_horas: parseInt(medFrecuencia) || 24, horarios_especificos: [`${hh}:${mm}`] });
+    },
+    onSuccess: () => resetAndClose('Medicamento asignado al paciente.', 'medicamentos')
+  });
+
+  const mutCita = useMutation({
+    mutationFn: () => {
+      const isoDate = new Date(citaFechaObj.getFullYear(), citaFechaObj.getMonth(), citaFechaObj.getDate(), citaHoraObj.getHours(), citaHoraObj.getMinutes()).toISOString();
+      return crearCita({ usuario_id: selectedAdultoId!, titulo_evento: citaTitulo.trim(), fecha_hora: isoDate, ubicacion: citaUbicacion.trim() });
+    },
+    onSuccess: () => resetAndClose('Cita programada exitosamente.', 'citas')
+  });
+
+  const mutNota = useMutation({
+    mutationFn: () => crearNota({ usuario_id: selectedAdultoId!, contenido: notaContenido.trim(), fecha_creacion: new Date().toISOString() }),
+    onSuccess: () => resetAndClose('Nota agregada al expediente.', 'notas')
+  });
+
+  const resetAndClose = (mensaje: string, queryKey: string) => {
+    Alert.alert('Éxito', mensaje);
+    setModalVisible('none');
+    setMedNombre(''); setMedDosis(''); setMedFrecuencia(''); setMedPrimeraToma(new Date());
+    setCitaTitulo(''); setCitaUbicacion(''); setCitaFechaObj(new Date()); setCitaHoraObj(new Date());
+    setNotaContenido('');
+    queryClient.invalidateQueries({ queryKey: [queryKey, selectedAdultoId] });
+  };
+
+  const formatTimeUI = (date: Date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  const formatDateUI = (date: Date) => date.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+
+  if (vinculados.length === 0) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+         <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary, textAlign: 'center' }}>Sin Pacientes</Text>
+         <Text style={{ fontSize: typography.base, color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>Agrega un adulto mayor para gestionar su agenda.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Gestión Remota</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
+          {vinculados.map((item) => (
+            <TouchableOpacity key={item.adulto._id} onPress={() => setSelectedAdultoId(item.adulto._id)} activeOpacity={0.8}
+              style={[styles.filterPill, { backgroundColor: selectedAdultoId === item.adulto._id ? colors.primary : colors.background, borderColor: selectedAdultoId === item.adulto._id ? colors.primary : colors.border }]}>
+              <Text style={{ color: selectedAdultoId === item.adulto._id ? '#fff' : colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }}>{item.adulto.nombre}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {isLoading && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )}
+
+        {!isLoading && (
+          <View style={styles.listContainer}>
+            {citas.map((cita) => (
+              <View key={cita._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.warning }]}><View style={styles.cardHeader}><View style={[styles.iconBox, { backgroundColor: colors.warning + '15' }]}><Stethoscope color={colors.warning} size={32} /></View><View style={styles.cardInfo}><Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{cita.titulo_evento}</Text><View style={styles.badgeContainer}><Text style={[styles.badgeText, { color: colors.warning, fontSize: typography.sm }]}>CITA MÉDICA</Text></View></View></View><View style={[styles.cardDetails, { borderTopColor: colors.border }]}><View style={styles.detailRow}><Calendar color={colors.textSecondary} size={20} /><Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base }]}>{new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })} a las {new Date(cita.fecha_hora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</Text></View></View></View>
+            ))}
+            {medicamentos.map((med) => (
+              <View key={med._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.primary }]}><View style={styles.cardHeader}><View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}><Pill color={colors.primary} size={32} /></View><View style={styles.cardInfo}><Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{med.nombre_farmaco}</Text><View style={styles.badgeContainerPrimary}><Text style={[styles.badgeTextPrimary, { color: colors.primary, fontSize: typography.sm }]}>MEDICAMENTO</Text></View></View></View><View style={[styles.cardDetails, { borderTopColor: colors.border }]}><View style={styles.detailRow}><Clock color={colors.textSecondary} size={20} /><Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }]}>Cada {med.frecuencia_horas} hrs</Text></View></View></View>
+            ))}
+            {notas.map((nota) => (
+              <View key={nota._id} style={[styles.card, { backgroundColor: '#fefce8', borderColor: '#fde047', borderLeftColor: '#eab308' }]}><View style={styles.cardHeader}><View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}><StickyNote color="#ca8a04" size={32} /></View><View style={styles.cardInfo}><Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{nota.contenido}</Text></View></View></View>
+            ))}
+            {citas.length === 0 && medicamentos.length === 0 && notas.length === 0 && (
+              <Text style={{ textAlign: 'center', marginTop: 20, color: colors.textSecondary, fontWeight: 'bold' }}>No hay registros para este paciente.</Text>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* FAB para Cuidador */}
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]} activeOpacity={0.8} onPress={() => setModalVisible('menu')}>
+        <Plus color="#ffffff" size={36} strokeWidth={3} />
+      </TouchableOpacity>
+
+      {/* MODAL MAESTRO REUTILIZADO (Igual que AgendaScreen pero muta para selectedAdultoId) */}
+      <Modal animationType="slide" transparent={true} visible={modalVisible !== 'none'} onRequestClose={() => setModalVisible('none')}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              
+              <View style={styles.modalHeader}>
+                <Text style={{ fontSize: typography.h2, fontWeight: '900', color: colors.textPrimary }}>
+                  {modalVisible === 'menu' && 'Asignar a Paciente'}
+                  {modalVisible === 'medicamento' && 'Nuevo Tratamiento'}
+                  {modalVisible === 'cita' && 'Nueva Cita Médica'}
+                  {modalVisible === 'nota' && 'Nuevo Apunte'}
+                </Text>
+                <TouchableOpacity onPress={() => setModalVisible('none')} style={{ padding: 8, backgroundColor: colors.background, borderRadius: 100 }}>
+                  <X color={colors.textSecondary} size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                
+                {modalVisible === 'menu' && (
+                  <View>
+                    <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('medicamento')}><View style={[styles.menuIconBox, { backgroundColor: colors.primaryLight }]}><Pill color={colors.primary} size={32} /></View><Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Medicamento</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('cita')}><View style={[styles.menuIconBox, { backgroundColor: colors.warning + '15' }]}><Calendar color={colors.warning} size={32} /></View><Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Cita Médica</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('nota')}><View style={[styles.menuIconBox, { backgroundColor: '#fef08a' }]}><StickyNote color="#ca8a04" size={32} /></View><Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Nota / Expediente</Text></TouchableOpacity>
+                  </View>
+                )}
+
+                {/* FORMULARIOS (Iguales a AgendaScreen) */}
+                {modalVisible === 'medicamento' && (
+                  <View style={{ paddingBottom: 20 }}>
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Nombre del Fármaco</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Losartán" placeholderTextColor={colors.textSecondary} value={medNombre} onChangeText={setMedNombre} />
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Dosis Recomendada</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. 1 Pastilla" placeholderTextColor={colors.textSecondary} value={medDosis} onChangeText={setMedDosis} />
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Frecuencia (Cada cuántas horas)</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. 8" keyboardType="numeric" placeholderTextColor={colors.textSecondary} value={medFrecuencia} onChangeText={setMedFrecuencia} />
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Primera toma programada</Text>
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowMedTimePicker(true)}><Clock color={colors.primary} size={24} style={{ marginRight: 12 }} /><Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>{formatTimeUI(medPrimeraToma)}</Text></TouchableOpacity>
+                    {showMedTimePicker && (<DateTimePicker value={medPrimeraToma} mode="time" display="default" onChange={(e,d) => {if(Platform.OS==='android') setShowMedTimePicker(false); if(d) setMedPrimeraToma(d);}} />)}
+                    <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutMed.isPending ? 0.7 : 1 }]} onPress={() => mutMed.mutate()} disabled={mutMed.isPending || !medNombre || !medDosis}>
+                      {mutMed.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Guardar</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {modalVisible === 'cita' && (
+                  <View style={{ paddingBottom: 20 }}>
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Motivo o Especialidad</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Cardiólogo" placeholderTextColor={colors.textSecondary} value={citaTitulo} onChangeText={setCitaTitulo} />
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Día de la cita</Text>
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowCitaDatePicker(true)}><Calendar color={colors.warning} size={24} style={{ marginRight: 12 }} /><Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold', textTransform: 'capitalize' }}>{formatDateUI(citaFechaObj)}</Text></TouchableOpacity>
+                    {showCitaDatePicker && (<DateTimePicker value={citaFechaObj} mode="date" display="default" minimumDate={new Date()} onChange={(e,d) => {if(Platform.OS==='android') setShowCitaDatePicker(false); if(d) setCitaFechaObj(d);}} />)}
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Hora</Text>
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowCitaTimePicker(true)}><Clock color={colors.warning} size={24} style={{ marginRight: 12 }} /><Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>{formatTimeUI(citaHoraObj)}</Text></TouchableOpacity>
+                    {showCitaTimePicker && (<DateTimePicker value={citaHoraObj} mode="time" display="default" onChange={(e,d) => {if(Platform.OS==='android') setShowCitaTimePicker(false); if(d) setCitaHoraObj(d);}} />)}
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Ubicación (Opcional)</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Clínica Centro" placeholderTextColor={colors.textSecondary} value={citaUbicacion} onChangeText={setCitaUbicacion} />
+                    <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutCita.isPending ? 0.7 : 1 }]} onPress={() => mutCita.mutate()} disabled={mutCita.isPending || !citaTitulo}>
+                      {mutCita.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Programar Cita</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {modalVisible === 'nota' && (
+                  <View style={{ paddingBottom: 20 }}>
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Apunte del Paciente</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg, minHeight: 120, textAlignVertical: 'top', paddingTop: 16 }]} placeholder="Escribe tu apunte aquí..." placeholderTextColor={colors.textSecondary} multiline value={notaContenido} onChangeText={setNotaContenido} />
+                    <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutNota.isPending ? 0.7 : 1 }]} onPress={() => mutNota.mutate()} disabled={mutNota.isPending || !notaContenido}>
+                      {mutNota.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Guardar Apunte</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  header: { padding: 20, paddingBottom: 16, borderBottomWidth: 2 },
+  headerTitle: { fontWeight: '900', marginBottom: 16 },
+  filterContainer: { gap: 12, paddingRight: 20 },
+  filterPill: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 100, borderWidth: 2, minHeight: 48, justifyContent: 'center' },
+  scrollContent: { flexGrow: 1, padding: 20, paddingBottom: 100 }, 
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
+  listContainer: { gap: 16 },
+  card: { borderRadius: 24, borderWidth: 2, borderLeftWidth: 8, overflow: 'hidden', marginBottom: 16 },
+  cardHeader: { flexDirection: 'row', padding: 20, alignItems: 'center' },
+  iconBox: { padding: 12, borderRadius: 16, marginRight: 16 },
+  cardInfo: { flex: 1 },
+  cardTitle: { fontWeight: '900', marginBottom: 6 },
+  badgeContainer: { alignSelf: 'flex-start', backgroundColor: '#eef2ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontWeight: '900', letterSpacing: 0.5 },
+  badgeContainerPrimary: { alignSelf: 'flex-start', backgroundColor: '#eff6ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgeTextPrimary: { fontWeight: '900', letterSpacing: 0.5 },
+  cardDetails: { padding: 20, paddingTop: 16, borderTopWidth: 2, backgroundColor: '#fafafa' },
+  detailRow: { flexDirection: 'row', alignItems: 'center' },
+  detailText: { marginLeft: 12, fontWeight: '600', flex: 1 },
+  fab: { position: 'absolute', bottom: 24, right: 24, width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 10 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  menuBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderRadius: 24, marginBottom: 16 },
+  menuIconBox: { padding: 12, borderRadius: 16, marginRight: 16 },
+  menuBtnText: { fontWeight: 'bold' },
+  label: { fontWeight: '900', marginBottom: 8 },
+  input: { borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64, fontWeight: '600', backgroundColor: '#fff' },
+  inputBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64 },
+  submitBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 64, borderRadius: 20, borderBottomWidth: 4, marginTop: 32 },
+});
+
+================
+File: src/screens/CuidadorVinculacionScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/CuidadorVinculacionScreen.tsx
+
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Linking } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Mail, Phone, Users, UserPlus } from 'lucide-react-native';
+
+import { useAuthStore } from '../store/useAuthStore';
+import { useAppTheme } from '../store/useThemeStore';
+import { obtenerAdultosVinculados, vincularAdultoMayor } from '../services/cuidador.service';
+
+export const CuidadorVinculacionScreen = () => {
+  const { usuarioId } = useAuthStore();
+  const { colors, typography } = useAppTheme();
+  const queryClient = useQueryClient();
+  
+  const [correo, setCorreo] = useState('');
+
+  const { data: vinculados = [], isLoading } = useQuery({
+    queryKey: ['vinculadosList', usuarioId],
+    queryFn: () => obtenerAdultosVinculados(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  const mutVincular = useMutation({
+    mutationFn: () => vincularAdultoMayor(usuarioId!, correo.trim().toLowerCase()),
+    onSuccess: () => {
+      Alert.alert('Éxito', 'Paciente vinculado correctamente.');
+      setCorreo('');
+      queryClient.invalidateQueries({ queryKey: ['vinculadosResumen', usuarioId] });
+      queryClient.invalidateQueries({ queryKey: ['vinculadosList', usuarioId] });
+    },
+    onError: (error: Error) => {
+      Alert.alert('Error', error.message || 'No se pudo vincular la cuenta.');
+    }
+  });
+
+  const hacerLlamada = (numero?: string) => {
+    if (!numero) {
+      Alert.alert('Aviso', 'El paciente no tiene un contacto de emergencia principal registrado.');
+      return;
+    }
+    Linking.openURL(`tel:${numero.replace(/\s+/g, '')}`);
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Vincular Paciente</Text>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          {/* FORMULARIO VINCULACIÓN */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <UserPlus color={colors.primary} size={28} style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: typography.xl, fontWeight: '900', color: colors.textPrimary }}>Agregar Familiar</Text>
+            </View>
+            <Text style={{ color: colors.textSecondary, fontSize: typography.base, marginBottom: 16 }}>
+              Ingresa el correo electrónico registrado por el Adulto Mayor para monitorear su agenda.
+            </Text>
+            
+            <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Mail color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="correo@ejemplo.com"
+                placeholderTextColor={colors.textSecondary}
+                value={correo}
+                onChangeText={setCorreo}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutVincular.isPending ? 0.7 : 1 }]}
+              onPress={() => mutVincular.mutate()}
+              disabled={mutVincular.isPending || !correo}
+            >
+              {mutVincular.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.lg, fontWeight: '900' }}>Vincular Cuenta</Text>}
+            </TouchableOpacity>
+          </View>
+
+          {/* DIRECTORIO */}
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>Directorio de Pacientes</Text>
+          
+          {isLoading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />}
+          
+          {!isLoading && vinculados.length === 0 && (
+            <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <Users color={colors.textSecondary} size={40} style={{ marginBottom: 12 }} />
+              <Text style={{ fontSize: typography.base, color: colors.textSecondary, textAlign: 'center' }}>No tienes pacientes vinculados a tu cuenta.</Text>
+            </View>
+          )}
+
+          {!isLoading && vinculados.map((item) => (
+            <View key={item.adulto._id} style={[styles.smallCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.smallCardContent}>
+                <View style={[styles.smallAvatarBox, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={{ color: colors.primary, fontWeight: '900', fontSize: typography.xl }}>{item.adulto.nombre.charAt(0)}</Text>
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={[styles.contactName, { color: colors.textPrimary, fontSize: typography.lg }]}>{item.adulto.nombre}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: typography.sm }}>{item.adulto.correo}</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                onPress={() => hacerLlamada(item.adulto.contactos_emergencia[0]?.telefono)}
+                style={[styles.callCircleBtn, { backgroundColor: colors.successLight, borderColor: colors.success }]}
+              >
+                <Phone color={colors.success} size={24} />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  header: { padding: 20, paddingBottom: 16, borderBottomWidth: 2 },
+  headerTitle: { fontWeight: '900' },
+  scrollContent: { flexGrow: 1, padding: 20, paddingBottom: 40 },
+  card: { padding: 20, borderRadius: 24, borderWidth: 2, marginBottom: 32 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontWeight: '600', minHeight: 64 },
+  submitBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 56, borderRadius: 16, marginTop: 16 },
+  sectionTitle: { fontWeight: '900', marginBottom: 16 },
+  smallCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, borderWidth: 2, marginBottom: 12 },
+  smallCardContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  smallAvatarBox: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  cardInfo: { flex: 1 },
+  contactName: { fontWeight: '900', marginBottom: 4 },
+  callCircleBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  emptyCard: { padding: 32, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center' },
+});
+
+================
+File: src/services/cuidador.service.ts
+================
+// [MÓVIL] Ruta: src/services/cuidador.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { Usuario, Medicamento, Cita, RegistroToma } from '../types';
+
+export interface ResumenAdultoVinculado {
+  adulto: Usuario;
+  medicamentos: Medicamento[];
+  citas_hoy: Cita[];
+  tomas_hoy: RegistroToma[];
+}
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  throw new Error('Ocurrió un error inesperado al conectar con el servidor.');
+};
+
+export const vincularAdultoMayor = async (cuidador_id: string, correo_adulto: string): Promise<Usuario> => {
+  const mutation = `
+    mutation VincularAdultoMayor($cuidador_id: ID!, $correo_adulto: String!) {
+      vincularAdultoMayor(cuidador_id: $cuidador_id, correo_adulto: $correo_adulto) {
+        _id
+        nombre
+        correo
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query: mutation, variables: { cuidador_id, correo_adulto } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.vincularAdultoMayor;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+export const obtenerAdultosVinculados = async (cuidador_id: string): Promise<ResumenAdultoVinculado[]> => {
+  const query = `
+    query ObtenerAdultosVinculados($cuidador_id: ID!) {
+      obtenerAdultosVinculados(cuidador_id: $cuidador_id) {
+        adulto {
+          _id
+          nombre
+          correo
+          contactos_emergencia { telefono }
+        }
+        medicamentos { _id nombre_farmaco frecuencia_horas }
+        citas_hoy { _id titulo_evento fecha_hora ubicacion }
+        tomas_hoy { _id medicamento_id }
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query, variables: { cuidador_id } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.obtenerAdultosVinculados || [];
+  } catch (error) {
+    handleGraphQLError(error);
+    return [];
+  }
+};
+
+================
+File: src/config/api.client.ts
+================
+// [MÓVIL] Ruta: src/config/api.client.ts
+
+import axios from 'axios';
+import { useAuthStore } from '../store/useAuthStore';
+
+// RECUERDA: Cambiar a la IP local de tu PC donde corre NestJS
+export const apiClient = axios.create({
+  baseURL: '  https://rebuilt-shakily-cinch.ngrok-free.dev/graphql', 
+  timeout: 45000, // <-- CORREGIDO: 45 segundos para dar tiempo a Ollama
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      return Promise.reject(new Error('El servidor tardó demasiado en responder. Si usas IA Local, espera un momento.'));
+    }
+    if (!error.response) {
+      return Promise.reject(new Error('No se pudo conectar con el servidor. Verifica tu red.'));
+    }
+    return Promise.reject(error);
+  }
+);
+
+================
+File: src/navigation/RootNavigator.tsx
+================
+// [MÓVIL] Ruta: src/navigation/RootNavigator.tsx
+
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuthStore } from '../store/useAuthStore';
+import { MainNavigator } from './MainNavigator';
+import { CuidadorNavigator } from './CuidadorNavigator';
+import { LoginScreen } from '../screens/LoginScreen';
+import { RegisterScreen } from '../screens/RegisterScreen';
+
+const AuthStack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
+
+const AuthNavigator = () => (
+  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Screen name="Login" component={LoginScreen} />
+    <AuthStack.Screen name="Register" component={RegisterScreen} />
+  </AuthStack.Navigator>
+);
+
+export const RootNavigator = () => {
+  const { isAuthenticated, rol } = useAuthStore();
+
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      {isAuthenticated ? (
+        rol === 'Cuidador' ? (
+          <RootStack.Screen name="Cuidador" component={CuidadorNavigator} />
+        ) : (
+          <RootStack.Screen name="Main" component={MainNavigator} />
+        )
+      ) : (
+        <RootStack.Screen name="Auth" component={AuthNavigator} />
+      )}
+    </RootStack.Navigator>
+  );
+};
+
+================
+File: src/screens/ApoyoScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/ApoyoScreen.tsx
+
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Phone, AlertTriangle, User, Heart, MessageCircle, Plus, X, Users } from 'lucide-react-native';
+
+import { useAppTheme } from '../store/useThemeStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { obtenerPerfilUsuario, agregarContactoEmergencia, AgregarContactoInput } from '../services/contactos.service';
+
+export const ApoyoScreen = () => {
+  const { colors, typography } = useAppTheme();
+  const { usuarioId } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  // Estados del Modal y Formulario
+  const [modalVisible, setModalVisible] = useState(false);
+  const [nombreContacto, setNombreContacto] = useState('');
+  const [telefonoContacto, setTelefonoContacto] = useState('');
+  const [parentescoContacto, setParentescoContacto] = useState('');
+
+  // 1. Obtener el perfil del usuario actual (Adulto Mayor)
+  const { data: perfil, isLoading: loadPerfil, isError: errPerfil } = useQuery({
+    queryKey: ['perfil', usuarioId],
+    queryFn: () => obtenerPerfilUsuario(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  // 2. Si tiene un cuidador vinculado, obtener los datos del cuidador
+  const cuidadorId = perfil?.cuidador_vinculado_id;
+  const { data: cuidador, isLoading: loadCuidador } = useQuery({
+    queryKey: ['perfil', cuidadorId],
+    queryFn: () => obtenerPerfilUsuario(cuidadorId!),
+    enabled: !!cuidadorId,
+  });
+
+  const contactos = perfil?.contactos_emergencia || [];
+  const isLoading = loadPerfil || loadCuidador;
+
+  // 3. Mutación para agregar contacto
+  const addContactMutation = useMutation({
+    mutationFn: (input: AgregarContactoInput) => agregarContactoEmergencia(input),
+    onSuccess: () => {
+      Alert.alert('Éxito', 'Contacto agregado a tu red de apoyo.');
+      setModalVisible(false);
+      setNombreContacto('');
+      setTelefonoContacto('');
+      setParentescoContacto('');
+      // Invalida la caché para que React Query haga un fetch automático en segundo plano
+      queryClient.invalidateQueries({ queryKey: ['perfil', usuarioId] });
+    },
+    onError: (error: Error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
+
+  // Función para realizar llamadas nativas
+  const hacerLlamada = (numero?: string) => {
+    if (!numero) {
+      Alert.alert('Aviso', 'Este contacto no tiene un número registrado.');
+      return;
+    }
+    const url = `tel:${numero.replace(/\s+/g, '')}`;
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert('Error', 'Tu dispositivo no soporta realizar llamadas desde la app.');
+        }
+      })
+      .catch((err) => console.error('Error al intentar llamar', err));
+  };
+
+  // Botón SOS: Llama al primer contacto, o al cuidador si no hay contactos
+  const handleSOS = () => {
+    if (contactos.length > 0) {
+      hacerLlamada(contactos[0].telefono);
+    } else {
+      Alert.alert('Aviso', 'Agrega un contacto primero para usar la alerta de llamada SOS.');
+    }
+  };
+
+  const handleGuardarContacto = () => {
+    if (!nombreContacto.trim() || !telefonoContacto.trim() || !parentescoContacto.trim()) {
+      Alert.alert('Campos incompletos', 'Por favor llena todos los datos del contacto.');
+      return;
+    }
+    addContactMutation.mutate({
+      usuario_id: usuarioId!,
+      nombre_contacto: nombreContacto.trim(),
+      telefono: telefonoContacto.trim(),
+      parentesco: parentescoContacto.trim()
+    });
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      
+      {/* CABECERA */}
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Red de Apoyo</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: typography.lg, marginTop: 4, fontWeight: '600' }}>
+          Tus contactos de confianza a un toque de distancia.
+        </Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        {/* BOTÓN MASIVO SOS */}
+        <TouchableOpacity 
+          style={[styles.sosButton, { backgroundColor: colors.danger, borderBottomColor: '#9f1239' }]}
+          activeOpacity={0.8}
+          onPress={handleSOS}
+        >
+          <View style={styles.sosIconContainer}>
+            <AlertTriangle color="#ffffff" size={48} strokeWidth={2.5} />
+          </View>
+          <Text style={[styles.sosText, { fontSize: typography.h1 }]}>LLAMADA DE{'\n'}EMERGENCIA</Text>
+        </TouchableOpacity>
+
+        {isLoading ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, marginTop: 16, fontWeight: 'bold', fontSize: typography.lg }}>Cargando tu red...</Text>
+          </View>
+        ) : errPerfil ? (
+          <View style={{ padding: 20, backgroundColor: '#ffe4e6', borderRadius: 16, borderWidth: 2, borderColor: colors.danger }}>
+            <Text style={{ color: colors.danger, fontWeight: 'bold', textAlign: 'center', fontSize: typography.lg }}>Ocurrió un error al cargar la red de apoyo.</Text>
+          </View>
+        ) : (
+          <>
+            {/* SECCIÓN CUIDADOR PRINCIPAL */}
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>Mi Cuidador Principal</Text>
+            {cuidador ? (
+              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.cardContent}>
+                  <View style={[styles.avatarBox, { backgroundColor: colors.primaryLight }]}>
+                    <Heart color={colors.primary} size={32} />
+                  </View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.contactName, { color: colors.textPrimary, fontSize: typography.h2 }]}>{cuidador.nombre}</Text>
+                    <Text style={{ color: colors.primary, fontSize: typography.base, fontWeight: 'bold' }}>Cuenta Vinculada Oficial</Text>
+                  </View>
+                </View>
+                <View style={[styles.actionButtonsRow, { borderTopColor: colors.border }]}>
+                  <TouchableOpacity onPress={() => Alert.alert('Alerta enviada', `Se notificó a ${cuidador.correo} (Simulado)`)} style={[styles.actionBtn, { borderRightColor: colors.border }]}>
+                    <AlertTriangle color={colors.primary} size={24} />
+                    <Text style={[styles.actionText, { color: colors.primary, fontSize: typography.base }]}>Enviar Alerta</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => Linking.openURL(`mailto:${cuidador.correo}`)} style={styles.actionBtn}>
+                    <MessageCircle color={colors.textSecondary} size={24} />
+                    <Text style={[styles.actionText, { color: colors.textSecondary, fontSize: typography.base }]}>Mensaje</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.card, { padding: 20, backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center' }]}>
+                <Text style={{ color: colors.textSecondary, fontWeight: 'bold', fontSize: typography.lg, textAlign: 'center' }}>Aún no tienes un cuidador vinculado desde los ajustes.</Text>
+              </View>
+            )}
+
+            {/* SECCIÓN OTROS CONTACTOS */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.xl, marginBottom: 0 }]}>Contactos Adicionales</Text>
+              <TouchableOpacity 
+                style={[styles.addBtnSmall, { backgroundColor: colors.primaryLight }]}
+                onPress={() => setModalVisible(true)}
+              >
+                <Plus color={colors.primary} size={24} strokeWidth={3} />
+                <Text style={{ color: colors.primary, fontWeight: '900', marginLeft: 4, fontSize: typography.base }}>AÑADIR</Text>
+              </TouchableOpacity>
+            </View>
+
+            {contactos.length > 0 ? (
+              contactos.map((contacto, index) => (
+                <View key={index} style={[styles.smallCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.smallCardContent}>
+                    <View style={[styles.smallAvatarBox, { backgroundColor: colors.background }]}>
+                      <User color={colors.textSecondary} size={24} />
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={[styles.contactName, { color: colors.textPrimary, fontSize: typography.lg }]}>{contacto.nombre_contacto}</Text>
+                      <Text style={{ color: colors.primary, fontSize: typography.base, fontWeight: 'bold', marginBottom: 2 }}>{contacto.parentesco}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: typography.base, fontWeight: '600' }}>{contacto.telefono}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => hacerLlamada(contacto.telefono)}
+                    style={[styles.callCircleBtn, { backgroundColor: colors.successLight, borderColor: colors.success }]}
+                  >
+                    <Phone color={colors.success} size={24} />
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : (
+              <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <View style={{ backgroundColor: colors.background, padding: 16, borderRadius: 100, marginBottom: 12 }}>
+                  <Users color={colors.textSecondary} size={40} />
+                </View>
+                <Text style={{ fontSize: typography.lg, color: colors.textSecondary, textAlign: 'center', fontWeight: 'bold' }}>
+                  No tienes contactos extra guardados.
+                </Text>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* MODAL DE NUEVO CONTACTO */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              
+              <View style={styles.modalHeader}>
+                <Text style={{ fontSize: typography.h2, fontWeight: '900', color: colors.textPrimary }}>Nuevo Contacto</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={{ padding: 8, backgroundColor: colors.background, borderRadius: 100 }}>
+                  <X color={colors.textSecondary} size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Nombre Completo</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]}
+                  placeholder="Ej. María Sánchez"
+                  placeholderTextColor={colors.textSecondary}
+                  value={nombreContacto}
+                  onChangeText={setNombreContacto}
+                  editable={!addContactMutation.isPending}
+                />
+
+                <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Parentesco / Rol</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]}
+                  placeholder="Ej. Hija, Vecino, Médico"
+                  placeholderTextColor={colors.textSecondary}
+                  value={parentescoContacto}
+                  onChangeText={setParentescoContacto}
+                  editable={!addContactMutation.isPending}
+                />
+
+                <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Número de Teléfono</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]}
+                  placeholder="Ej. 5512345678"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  value={telefonoContacto}
+                  onChangeText={setTelefonoContacto}
+                  editable={!addContactMutation.isPending}
+                />
+
+                <TouchableOpacity 
+                  style={[styles.submitBtn, { backgroundColor: colors.primary, borderBottomColor: '#1e40af', opacity: addContactMutation.isPending ? 0.7 : 1 }]}
+                  onPress={handleGuardarContacto}
+                  disabled={addContactMutation.isPending}
+                  activeOpacity={0.8}
+                >
+                  {addContactMutation.isPending ? (
+                    <ActivityIndicator color="#fff" size="large" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Guardar Contacto</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  header: { padding: 20, paddingBottom: 24, borderBottomWidth: 2 },
+  headerTitle: { fontWeight: '900' },
+  scrollContent: { flexGrow: 1, padding: 20, paddingBottom: 40 },
+  sosButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 24, borderRadius: 32, borderBottomWidth: 8, marginBottom: 32, shadowColor: '#e11d48', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  sosIconContainer: { backgroundColor: 'rgba(255,255,255,0.25)', padding: 16, borderRadius: 100, marginRight: 16 },
+  sosText: { color: '#ffffff', fontWeight: '900', letterSpacing: 1 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: 16 },
+  sectionTitle: { fontWeight: '900', marginBottom: 16 },
+  addBtnSmall: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  card: { borderRadius: 24, borderWidth: 2, marginBottom: 24, overflow: 'hidden' },
+  cardContent: { flexDirection: 'row', padding: 20, alignItems: 'center' },
+  avatarBox: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  cardInfo: { flex: 1 },
+  contactName: { fontWeight: '900', marginBottom: 4 },
+  actionButtonsRow: { flexDirection: 'row', borderTopWidth: 2, backgroundColor: '#fafafa' },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRightWidth: 2 },
+  actionText: { fontWeight: 'bold', marginLeft: 8 },
+  smallCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, borderWidth: 2, marginBottom: 12 },
+  smallCardContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  smallAvatarBox: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  callCircleBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  emptyCard: { padding: 32, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center' },
+  
+  // Estilos del Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  label: { fontWeight: '900', marginBottom: 8 },
+  input: { borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64, fontWeight: '600' },
+  submitBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 64, borderRadius: 20, borderBottomWidth: 4, marginTop: 32 },
+});
+
+================
+File: src/screens/LoginScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/LoginScreen.tsx
+
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMutation } from '@tanstack/react-query';
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
+
+import { useAppTheme } from '../store/useThemeStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { loginUsuario } from '../services/auth.service';
+
+export const LoginScreen = ({ navigation }: any) => {
+  const { colors, typography } = useAppTheme();
+  const loginFn = useAuthStore((state) => state.login);
+  
+  const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: () => loginUsuario(correo.trim(), password),
+    onSuccess: (data) => {
+      loginFn(data.access_token, data.usuario_id, data.rol);
+    },
+    onError: (error: Error) => {
+      Alert.alert('Error al Iniciar Sesión', error.message);
+    }
+  });
+
+  const handleLogin = () => {
+    if (!correo || !password) return;
+    mutation.mutate();
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          <View style={styles.headerContainer}>
+            <Image 
+              source={require('../../assets/logo_LumaIA.png')} 
+              style={{ width: 120, height: 120, resizeMode: 'contain', marginBottom: 16 }} 
+            />
+            <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.h1 }]}>Iniciar Sesión</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: typography.lg }]}>Ingresa a tu cuenta LumaIA</Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Correo Electrónico</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Mail color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="ejemplo@correo.com"
+                placeholderTextColor={colors.textSecondary}
+                value={correo}
+                onChangeText={setCorreo}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!mutation.isPending}
+              />
+            </View>
+
+            <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Contraseña</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Lock color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!mutation.isPending}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                {showPassword ? <EyeOff color={colors.textSecondary} size={24} /> : <Eye color={colors.textSecondary} size={24} />}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.submitBtn, { backgroundColor: colors.primary, borderBottomColor: '#1e40af' }]}
+              onPress={handleLogin}
+              disabled={mutation.isPending || !correo || !password}
+              activeOpacity={0.8}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator color="#fff" size="large" />
+              ) : (
+                <>
+                  <Text style={[styles.submitText, { fontSize: typography.h2 }]}>Entrar</Text>
+                  <ArrowRight color="#fff" size={28} strokeWidth={3} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={{ color: colors.textSecondary, fontSize: typography.lg, fontWeight: 'bold' }}>¿No tienes una cuenta?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{ paddingVertical: 8 }}>
+              <Text style={{ color: colors.primary, fontSize: typography.xl, fontWeight: '900' }}>Crear cuenta nueva</Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  scrollContent: { flexGrow: 1, padding: 24, justifyContent: 'center' },
+  headerContainer: { alignItems: 'center', marginBottom: 32 },
+  title: { fontWeight: '900', marginBottom: 4 },
+  subtitle: { fontWeight: '600' },
+  formContainer: { width: '100%' },
+  label: { fontWeight: '900', marginBottom: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontWeight: '600', minHeight: 64 },
+  eyeBtn: { padding: 8, marginLeft: 4 },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 64, borderRadius: 20, borderBottomWidth: 4, marginTop: 32 },
+  submitText: { color: '#fff', fontWeight: '900', marginRight: 12 },
+  footer: { alignItems: 'center', marginTop: 40 }
+});
+
+================
+File: src/screens/RegisterScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/RegisterScreen.tsx
+
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMutation } from '@tanstack/react-query';
+import { Mail, Lock, User, Eye, EyeOff, HeartPulse, ShieldCheck, ArrowLeft } from 'lucide-react-native';
+
+import { useAppTheme } from '../store/useThemeStore';
+import { registrarUsuario, mapEnumToGraphQLRole } from '../services/auth.service';
+import { Enum_Rol } from '../types';
+
+export const RegisterScreen = ({ navigation }: any) => {
+  const { colors, typography } = useAppTheme();
+  
+  const [nombre, setNombre] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rol, setRol] = useState<Enum_Rol | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => registrarUsuario({
+      nombre: nombre.trim(),
+      correo: correo.trim().toLowerCase(),
+      password,
+      rol: mapEnumToGraphQLRole(rol!)
+    }),
+    onSuccess: () => {
+      Alert.alert(
+        '¡Registro Exitoso!',
+        'Tu cuenta ha sido creada. Por favor, inicia sesión.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    },
+    onError: (error: Error) => {
+      Alert.alert('Error en el Registro', error.message);
+    }
+  });
+
+  const handleRegister = () => {
+    if (!nombre || !correo || !password || !confirmPassword || !rol) {
+      Alert.alert('Atención', 'Por favor completa todos los campos y selecciona un rol.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden. Inténtalo de nuevo.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    mutation.mutate();
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        
+        <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <ArrowLeft color={colors.textPrimary} size={28} />
+          </TouchableOpacity>
+          <Text style={{ fontSize: typography.h2, fontWeight: '900', color: colors.textPrimary }}>Crear Cuenta</Text>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../../assets/logo_LumaIA.png')} 
+              style={{ width: 80, height: 80, resizeMode: 'contain', marginBottom: 16 }} 
+            />
+          </View>
+
+          <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.xl, marginBottom: 12 }]}>¿Cómo usarás la App?</Text>
+          <View style={styles.roleContainer}>
+            <TouchableOpacity 
+              style={[styles.roleCard, { 
+                borderColor: rol === 'Adulto Mayor' ? colors.primary : colors.border, 
+                backgroundColor: rol === 'Adulto Mayor' ? colors.primaryLight : colors.surface 
+              }]}
+              onPress={() => setRol('Adulto Mayor')}
+              activeOpacity={0.8}
+            >
+              <HeartPulse color={rol === 'Adulto Mayor' ? colors.primary : colors.textSecondary} size={40} />
+              <Text style={[styles.roleText, { color: rol === 'Adulto Mayor' ? colors.primary : colors.textSecondary, fontSize: typography.lg }]}>Adulto Mayor</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.roleCard, { 
+                borderColor: rol === 'Cuidador' ? colors.success : colors.border, 
+                backgroundColor: rol === 'Cuidador' ? colors.successLight : colors.surface 
+              }]}
+              onPress={() => setRol('Cuidador')}
+              activeOpacity={0.8}
+            >
+              <ShieldCheck color={rol === 'Cuidador' ? colors.success : colors.textSecondary} size={40} />
+              <Text style={[styles.roleText, { color: rol === 'Cuidador' ? colors.success : colors.textSecondary, fontSize: typography.lg }]}>Cuidador</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.formContainer}>
+            <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Nombre Completo</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <User color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="Ej. Juan Pérez"
+                placeholderTextColor={colors.textSecondary}
+                value={nombre}
+                onChangeText={setNombre}
+                editable={!mutation.isPending}
+              />
+            </View>
+
+            <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Correo Electrónico</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Mail color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="ejemplo@correo.com"
+                placeholderTextColor={colors.textSecondary}
+                value={correo}
+                onChangeText={setCorreo}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!mutation.isPending}
+              />
+            </View>
+
+            <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Contraseña</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Lock color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="Mínimo 6 caracteres"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!mutation.isPending}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                {showPassword ? <EyeOff color={colors.textSecondary} size={24} /> : <Eye color={colors.textSecondary} size={24} />}
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Confirmar Contraseña</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Lock color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
+                placeholder="Repite tu contraseña"
+                placeholderTextColor={colors.textSecondary}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                editable={!mutation.isPending}
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeBtn}>
+                {showConfirmPassword ? <EyeOff color={colors.textSecondary} size={24} /> : <Eye color={colors.textSecondary} size={24} />}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.submitBtn, { backgroundColor: colors.primary, borderBottomColor: '#1e40af', opacity: mutation.isPending ? 0.7 : 1 }]}
+              onPress={handleRegister}
+              disabled={mutation.isPending}
+              activeOpacity={0.8}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator color="#fff" size="large" />
+              ) : (
+                <Text style={[styles.submitText, { fontSize: typography.h2 }]}>Finalizar Registro</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  topBar: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 2 },
+  backButton: { padding: 8, borderRadius: 16, marginRight: 16 },
+  scrollContent: { flexGrow: 1, padding: 24 },
+  logoContainer: { alignItems: 'center', marginBottom: 16 },
+  roleContainer: { flexDirection: 'row', gap: 16, marginBottom: 24 },
+  roleCard: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, borderWidth: 2, borderRadius: 24, minHeight: 130 },
+  roleText: { fontWeight: '900', marginTop: 12 },
+  formContainer: { width: '100%', paddingBottom: 40 },
+  label: { fontWeight: '900', marginBottom: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontWeight: '600', minHeight: 64 },
+  eyeBtn: { padding: 8, marginLeft: 4 },
+  submitBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 64, borderRadius: 20, borderBottomWidth: 4, marginTop: 32 },
+  submitText: { color: '#fff', fontWeight: '900' },
+});
+
+================
+File: src/services/auth.service.ts
+================
+// [MÓVIL] Ruta: src/services/auth.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { Enum_Rol, Usuario } from '../types';
+
+export interface LoginResponse {
+  access_token: string;
+  usuario_id: string;
+  rol: Enum_Rol;
+}
+
+// Extractor de Errores GraphQL
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  if (error instanceof Error) {
+    throw error;
+  }
+  throw new Error('Ocurrió un error inesperado');
+};
+
+const mapGraphQLRoleToEnum = (gqlRole: string): Enum_Rol => {
+  if (gqlRole === 'ADULTO_MAYOR') return 'Adulto Mayor';
+  if (gqlRole === 'CUIDADOR') return 'Cuidador';
+  return 'Adulto Mayor'; 
+};
+
+export const mapEnumToGraphQLRole = (rol: Enum_Rol): string => {
+  if (rol === 'Adulto Mayor') return 'ADULTO_MAYOR';
+  if (rol === 'Cuidador') return 'CUIDADOR';
+  return 'ADULTO_MAYOR';
+};
+
+export const loginUsuario = async (correo: string, password: string): Promise<LoginResponse> => {
+  const query = `
+    mutation Login($correo: String!, $password: String!) {
+      login(correo: $correo, password: $password) {
+        access_token
+        usuario_id
+        rol
+      }
+    }
+  `;
+
+  try {
+    const response = await apiClient.post('', {
+      query,
+      variables: { correo, password },
+    });
+
+    if (response.data.errors?.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    const data = response.data.data.login;
+    return {
+      access_token: data.access_token,
+      usuario_id: data.usuario_id,
+      rol: mapGraphQLRoleToEnum(data.rol),
+    };
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+export const registrarUsuario = async (input: any): Promise<Usuario> => {
+  const mutation = `
+    mutation RegistrarUsuario($input: CreateUsuarioInput!) {
+      registrarUsuario(input: $input) {
+        _id
+        nombre
+        correo
+        rol
+        estado_activo
+      }
+    }
+  `;
+
+  try {
+    const response = await apiClient.post('', {
+      query: mutation,
+      variables: { input },
+    });
+
+    if (response.data.errors?.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    return response.data.data.registrarUsuario;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/services/contactos.service.ts
+================
+// [MÓVIL] Ruta: src/services/contactos.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { Usuario } from '../types';
+
+export interface AgregarContactoInput {
+  usuario_id: string;
+  nombre_contacto: string;
+  telefono: string;
+  parentesco: string;
+}
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  if (error instanceof Error) {
+    throw error;
+  }
+  throw new Error('Ocurrió un error inesperado al conectar con el servidor.');
+};
+
+// 1. Obtener Perfil (Red de Apoyo y Cuidador)
+export const obtenerPerfilUsuario = async (usuario_id: string): Promise<Usuario> => {
+  if (!usuario_id) throw new Error("Sesión inactiva.");
+
+  const query = `
+    query ObtenerUsuario($usuario_id: ID!) {
+      obtenerUsuario(usuario_id: $usuario_id) {
+        _id
+        nombre
+        correo
+        rol
+        cuidador_vinculado_id
+        contactos_emergencia {
+          nombre_contacto
+          telefono
+          parentesco
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await apiClient.post('', {
+      query,
+      variables: { usuario_id },
+    });
+
+    if (response.data.errors?.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    return response.data.data.obtenerUsuario;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+// 2. Agregar Nuevo Contacto de Emergencia
+export const agregarContactoEmergencia = async (input: AgregarContactoInput): Promise<Usuario> => {
+  const mutation = `
+    mutation AgregarContactoEmergencia($input: AgregarContactoInput!) {
+      agregarContactoEmergencia(input: $input) {
+        _id
+        contactos_emergencia {
+          nombre_contacto
+          telefono
+          parentesco
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await apiClient.post('', {
+      query: mutation,
+      variables: { input },
+    });
+
+    if (response.data.errors?.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    return response.data.data.agregarContactoEmergencia;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/services/notas.service.ts
+================
+// [MÓVIL] Ruta: src/services/notas.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+
+export interface NotaPersonal {
+  _id: string;
+  contenido: string;
+  fecha_creacion: string;
+}
+
+export interface CreateNotaInput {
+  usuario_id: string;
+  contenido: string;
+  fecha_creacion: string;
+}
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  throw new Error('Ocurrió un error inesperado al conectar con el servidor.');
+};
+
+export const obtenerNotas = async (usuario_id: string): Promise<NotaPersonal[]> => {
+  const query = `
+    query ObtenerNotasPersonales($usuario_id: ID!) {
+      obtenerNotasPersonalesPorUsuario(usuario_id: $usuario_id) {
+        _id
+        contenido
+        fecha_creacion
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query, variables: { usuario_id } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.obtenerNotasPersonalesPorUsuario || [];
+  } catch (error) {
+    handleGraphQLError(error);
+    return [];
+  }
+};
+
+export const crearNota = async (input: CreateNotaInput): Promise<NotaPersonal> => {
+  const mutation = `
+    mutation CrearNotaPersonal($input: CreateNotaPersonalInput!) {
+      crearNotaPersonal(createNotaPersonalInput: $input) {
+        _id
+        contenido
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query: mutation, variables: { input } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.crearNotaPersonal;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/services/usuarios.service.ts
+================
+// [MÓVIL] Ruta: src/services/usuarios.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { Usuario } from '../types';
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  if (error instanceof Error) {
+    throw error;
+  }
+  throw new Error('Ocurrió un error inesperado al conectar con el servidor.');
+};
+
+export const obtenerPerfilUsuario = async (usuario_id: string): Promise<Usuario> => {
+  if (!usuario_id) throw new Error("Sesión inactiva.");
+
+  const query = `
+    query ObtenerUsuario($usuario_id: ID!) {
+      obtenerUsuario(usuario_id: $usuario_id) {
+        _id
+        nombre
+        correo
+        rol
+        cuidador_vinculado_id
+        contactos_emergencia {
+          nombre_contacto
+          telefono
+          parentesco
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await apiClient.post('', {
+      query,
+      variables: { usuario_id },
+    });
+
+    if (response.data.errors?.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    return response.data.data.obtenerUsuario;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/store/useAuthStore.ts
+================
+// [MÓVIL] Ruta: src/store/useAuthStore.ts
+
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Enum_Rol } from '../types/index';
+
+interface AuthState {
+  token: string | null;
+  usuarioId: string | null;
+  rol: Enum_Rol | null;
+  isAuthenticated: boolean;
+  login: (token: string, usuarioId: string, rol: Enum_Rol) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      token: null,
+      usuarioId: null,
+      rol: null,
+      isAuthenticated: false,
+      login: (token, usuarioId, rol) => set({ token, usuarioId, rol, isAuthenticated: true }),
+      logout: () => set({ token: null, usuarioId: null, rol: null, isAuthenticated: false }),
+    }),
+    { 
+      name: 'luma-auth-storage',
+      // CRÍTICO: Aquí le decimos a Zustand que use el almacenamiento nativo de React Native
+      storage: createJSONStorage(() => AsyncStorage) 
+    }
+  )
+);
+
+================
+File: src/store/useThemeStore.ts
+================
+// [MÓVIL] Ruta: src/store/useThemeStore.ts
+
+import { create } from 'zustand';
+
+type FontSizeSize = 'normal' | 'large' | 'xlarge';
+type ContrastMode = 'normal' | 'high';
+
+interface ThemeState {
+  fontSize: FontSizeSize;
+  contrast: ContrastMode;
+  setFontSize: (size: FontSizeSize) => void;
+  setContrast: (mode: ContrastMode) => void;
+}
+
+export const useThemeStore = create<ThemeState>((set) => ({
+  fontSize: 'normal',
+  contrast: 'normal',
+  setFontSize: (size) => set({ fontSize: size }),
+  setContrast: (mode) => set({ contrast: mode }),
+}));
+
+// Hook generador de Tema para usar en los componentes
+export const useAppTheme = () => {
+  const { fontSize, contrast } = useThemeStore();
+
+  // Factor de escala de fuente
+  const fontScale = fontSize === 'normal' ? 1 : fontSize === 'large' ? 1.2 : 1.4;
+
+  // Paleta de Colores Dinámica
+  const colors = {
+    background: contrast === 'high' ? '#ffffff' : '#f8fafc', // slate-50
+    surface: contrast === 'high' ? '#ffffff' : '#ffffff',
+    textPrimary: contrast === 'high' ? '#000000' : '#0f172a', // slate-900
+    textSecondary: contrast === 'high' ? '#333333' : '#475569', // slate-600
+    border: contrast === 'high' ? '#000000' : '#e2e8f0', // slate-200
+    primary: contrast === 'high' ? '#0000ee' : '#2563eb', // blue-600
+    primaryLight: contrast === 'high' ? '#e6e6ff' : '#eff6ff', // blue-50
+    success: contrast === 'high' ? '#006600' : '#059669', // emerald-600
+    successLight: contrast === 'high' ? '#e6ffe6' : '#ecfdf5', // emerald-50
+    danger: contrast === 'high' ? '#cc0000' : '#e11d48', // rose-600
+    warning: contrast === 'high' ? '#660066' : '#4f46e5', // indigo-600
+  };
+
+  // Tamaños de texto dinámicos
+  const typography = {
+    xs: 12 * fontScale,
+    sm: 14 * fontScale,
+    base: 16 * fontScale,
+    lg: 18 * fontScale,
+    xl: 20 * fontScale,
+    h2: 24 * fontScale,
+    h1: 32 * fontScale,
+  };
+
+  return { colors, typography };
+};
+
+================
+File: src/types/index.ts
+================
+// [MÓVIL] Ruta: src/types/index.ts
+
+export type Enum_Rol = 'Adulto Mayor' | 'Cuidador';
+export type Enum_EstadoToma = 'PENDIENTE' | 'CONFIRMADA' | 'OMITIDA';
+export type Enum_EstadoCita = 'PROGRAMADA' | 'COMPLETADA' | 'CANCELADA';
+
+export interface ContactoEmergencia {
+    nombre_contacto: string;
+    telefono: string;
+    parentesco: string;
+}
+
+export interface Usuario {
+    _id: string;
+    nombre: string;
+    correo: string;
+    rol: Enum_Rol;
+    cuidador_vinculado_id?: string;
+    pin_vinculacion?: string;
+    estado_activo: boolean;
+    tokens_dispositivo: string[];
+    contactos_emergencia: ContactoEmergencia[];
+}
+
+export interface Medicamento {
+    _id: string;
+    usuario_id: string;
+    nombre_farmaco: string;
+    dosis: string;
+    frecuencia_horas?: number;
+    horarios_especificos: string[];
+}
+
+export interface Cita {
+    _id: string;
+    usuario_id: string;
+    titulo_evento: string;
+    fecha_hora: string; 
+    ubicacion?: string;
+    estado: Enum_EstadoCita;
+}
+
+export interface RegistroToma {
+    _id: string;
+    medicamento_id: string;
+    fecha_programada: string; 
+    estado_toma: Enum_EstadoToma;
+    fecha_confirmacion?: string; 
+}
+
+================
+File: .gitignore
+================
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+================
+File: AGENTS.md
+================
+This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+
+## Expo has changed — do not trust your training data
+
+Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+
+1. Read the major version of the `expo` package in `package.json`.
+2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
+3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+
+## Commands
+
+Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+
+```bash
+npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
+npx expo start              # start the dev server
+npx expo lint               # lint
+npx tsc --noEmit            # typecheck
+npx expo-doctor             # diagnose dependency and config issues
+npx expo install --fix      # fix incompatible package versions
+```
+
+Run lint and typecheck before declaring any task done.
+
+## Navigation & Routing
+
+- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
+- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
+- Docs: https://docs.expo.dev/router/introduction.md
+
+## Building with EAS
+
+Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
+Docs: https://docs.expo.dev/eas/index.md
+
+## Rules
+
+- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
+- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
+- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+================
+File: index.ts
+================
+import { registerRootComponent } from 'expo';
+
+import App from './App';
+
+// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
+// It also ensures that whether you load the app in Expo Go or in a native build,
+// the environment is set up appropriately
+registerRootComponent(App);
+
+================
+File: LICENSE
+================
+The MIT License (MIT)
+
+Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================
+File: README.md
+================
+# LumaIA_Frontend_Movil
+
+================
+File: tsconfig.json
+================
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true
+  }
+}
+
+================
+File: src/navigation/MainNavigator.tsx
+================
+// [MÓVIL] Ruta: src/navigation/MainNavigator.tsx
+
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Home, Mic, CalendarDays, PhoneCall } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useAppTheme } from '../store/useThemeStore';
+import { DashboardScreen } from '../screens/DashboardScreen';
+import { ChatScreen } from '../screens/ChatScreen';
+import { AgendaScreen } from '../screens/AgendaScreen';
+import { ApoyoScreen } from '../screens/ApoyoScreen';
+
+const Tab = createBottomTabNavigator();
+
+export const MainNavigator = () => {
+  const { colors, typography } = useAppTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopWidth: 2,
+          borderTopColor: colors.border,
+          height: 70 + insets.bottom, // Sumamos el margen inferior seguro
+          paddingBottom: 10 + insets.bottom, // Elevamos los iconos respetando el notch/gestos
+          paddingTop: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: typography.xs,
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <Tab.Screen 
+        name="Inicio" 
+        component={DashboardScreen} 
+        options={{
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size + 4} />
+        }}
+      />
+      <Tab.Screen 
+        name="Luma" 
+        component={ChatScreen} 
+        options={{
+          tabBarIcon: ({ color, size }) => <Mic color={color} size={size + 4} />
+        }}
+      />
+      <Tab.Screen 
+        name="Agenda" 
+        component={AgendaScreen} 
+        options={{
+          tabBarIcon: ({ color, size }) => <CalendarDays color={color} size={size + 4} />
+        }}
+      />
+      <Tab.Screen 
+        name="Apoyo" 
+        component={ApoyoScreen} 
+        options={{
+          tabBarIcon: ({ color, size }) => <PhoneCall color={color} size={size + 4} />
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
+
+================
+File: src/screens/ChatScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/ChatScreen.tsx
+
+import React, { useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Modal, Pressable, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMutation } from '@tanstack/react-query';
+import * as Speech from 'expo-speech';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import { ArrowLeft, Volume2, Pill, CalendarDays, Sparkles, CheckSquare, Sun, Mic, Send, ChevronDown, Cloud, Server } from 'lucide-react-native';
+
+import { useAuthStore } from '../store/useAuthStore';
+import { useAppTheme } from '../store/useThemeStore';
+import { consultarAsistente } from '../services/ia.service';
+
+interface Mensaje {
+  id: string;
+  emisor: 'user' | 'bot';
+  texto: string;
+}
+
+type ModeloIA = 'Luma Cloud' | 'Llama 3.2 Local';
+
+export const ChatScreen = ({ navigation }: any) => {
+  const { usuarioId } = useAuthStore();
+  const { colors, typography } = useAppTheme();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const [historial, setHistorial] = useState<Mensaje[]>([
+    { id: 'init', emisor: 'bot', texto: `¡Hola! Soy Luma. ¿En qué te puedo ayudar hoy? 😊` }
+  ]);
+  
+  const [inputText, setInputText] = useState('');
+  const [modeloIA, setModeloIA] = useState<ModeloIA>('Luma Cloud');
+  const [modalModeloVisible, setModalModeloVisible] = useState(false);
+  
+  // ESTADOS DE AUDIO
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isListening, setIsListening] = useState(false);
+
+  const reproducirAudio = (texto: string) => {
+    Speech.stop(); 
+    Speech.speak(texto, { language: 'es-MX', rate: 0.9 });
+  };
+
+  const mutation = useMutation({
+    mutationFn: (pregunta_id: string) => consultarAsistente({ usuario_id: usuarioId!, pregunta_id, modelo: modeloIA }),
+    onSuccess: (respuesta) => {
+      setHistorial(prev => [...prev, { id: Date.now().toString(), emisor: 'bot', texto: respuesta }]);
+      reproducirAudio(respuesta);
+    },
+    onError: (error) => {
+      const msjError = error instanceof Error ? error.message : 'Problema al procesar tu consulta.';
+      setHistorial(prev => [...prev, { id: Date.now().toString(), emisor: 'bot', texto: `Error: ${msjError}` }]);
+    }
+  });
+
+  const hacerPregunta = (textoPregunta: string, idOculto?: string) => {
+    if (mutation.isPending) return;
+    const promptFinal = idOculto ? idOculto : textoPregunta;
+    setHistorial(prev => [...prev, { id: Date.now().toString(), emisor: 'user', texto: textoPregunta }]);
+    mutation.mutate(promptFinal);
+    setInputText('');
+  };
+
+  // --- LÓGICA DE RECONOCIMIENTO DE VOZ ---
+  const startRecordingMobile = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === 'granted') {
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        setRecording(recording);
+        setIsListening(true);
+      } else {
+        Alert.alert('Permiso denegado', 'Necesitamos acceso al micrófono para que Luma te escuche.');
+      }
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecordingMobile = async () => {
+    if (!recording) return;
+    setIsListening(false);
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setRecording(null);
+    
+    if (uri) {
+       // Leemos el archivo en Base64
+       const base64Audio = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+       // AQUÍ: Llamaríamos a la mutación para que Whisper en NestJS transcriba el Base64 a texto.
+       // Por ahora, simulamos que el texto llega y lo ponemos en el input:
+       Alert.alert('Audio Capturado', 'Audio convertido a Base64 listo para enviar al backend (Transcriptor Whisper en desarrollo).');
+    }
+  };
+
+  const startWebSpeech = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        Alert.alert('Error', 'Tu navegador no soporta dictado por voz de forma nativa.');
+        return;
+    }
+    setIsListening(true);
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-MX';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+        const text = event.results[0][0].transcript;
+        setInputText(prev => (prev + ' ' + text).trim());
+        setIsListening(false);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
+
+  const handleMicPress = () => {
+    if (isListening) {
+      Platform.OS === 'web' ? setIsListening(false) : stopRecordingMobile();
+    } else {
+      Platform.OS === 'web' ? startWebSpeech() : startRecordingMobile();
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <ArrowLeft color={colors.textPrimary} size={28} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <View style={{ backgroundColor: colors.primaryLight, padding: 6, borderRadius: 100, marginRight: 8 }}>
+              {modeloIA === 'Luma Cloud' ? <Cloud color={colors.primary} size={20} /> : <Server color={colors.primary} size={20} />}
+            </View>
+            <Text style={{ fontSize: typography.h2, fontWeight: '900', color: colors.textPrimary }}>Luma</Text>
+          </View>
+        </View>
+
+        <ScrollView ref={scrollViewRef} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })} contentContainerStyle={styles.chatContainer}>
+          {historial.map((msg) => (
+            <View key={msg.id} style={[styles.messageRow, msg.emisor === 'user' ? styles.rowReverse : styles.rowNormal]}>
+              {msg.emisor === 'bot' && (
+                <View style={[styles.botAvatar, { backgroundColor: colors.primary }]}><Sparkles color="#fff" size={18} /></View>
+              )}
+              <View style={{ flexShrink: 1 }}>
+                <View style={[styles.bubble, { 
+                  backgroundColor: msg.emisor === 'user' ? colors.primary : colors.surface,
+                  borderColor: msg.emisor === 'user' ? colors.primary : colors.border,
+                  borderTopRightRadius: msg.emisor === 'user' ? 4 : 24,
+                  borderTopLeftRadius: msg.emisor === 'bot' ? 4 : 24,
+                }]}>
+                  <Text style={{ color: msg.emisor === 'user' ? '#fff' : colors.textPrimary, fontSize: typography.lg, fontWeight: '600' }}>{msg.texto}</Text>
+                </View>
+                {msg.emisor === 'bot' && (
+                  <TouchableOpacity onPress={() => reproducirAudio(msg.texto)} style={[styles.audioButton, { backgroundColor: colors.border }]}>
+                    <Volume2 color={colors.textPrimary} size={18} />
+                    <Text style={{ color: colors.textPrimary, fontWeight: 'bold', fontSize: typography.sm, marginLeft: 6 }}>Escuchar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          ))}
+          {mutation.isPending && (
+            <View style={[styles.messageRow, styles.rowNormal]}>
+              <View style={[styles.botAvatar, { backgroundColor: colors.primary }]}><Sparkles color="#fff" size={18} /></View>
+              <View style={[styles.bubble, { backgroundColor: colors.surface, borderColor: colors.border, borderTopLeftRadius: 4 }]}><ActivityIndicator color={colors.primary} /></View>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={[styles.bottomArea, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomScroll}>
+            <TouchableOpacity disabled={mutation.isPending} onPress={() => hacerPregunta('¿Cuál es mi próxima medicina?', 'PROXIMA_TOMA')} style={[styles.quickBtn, { borderColor: colors.border }]}>
+              <Pill color={colors.primary} size={20} />
+              <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Próxima Medicina</Text>
+            </TouchableOpacity>
+            <TouchableOpacity disabled={mutation.isPending} onPress={() => hacerPregunta('¿Qué pastillas ya me tomé hoy?', 'TOMAS_REALIZADAS')} style={[styles.quickBtn, { borderColor: colors.border }]}>
+              <CheckSquare color={colors.success} size={20} />
+              <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Ya Tomadas</Text>
+            </TouchableOpacity>
+            <TouchableOpacity disabled={mutation.isPending} onPress={() => hacerPregunta('¿Tengo citas programadas para hoy?', 'CITAS_HOY')} style={[styles.quickBtn, { borderColor: colors.border }]}>
+              <CalendarDays color={colors.warning} size={20} />
+              <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Citas Hoy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity disabled={mutation.isPending} onPress={() => hacerPregunta('Dame un resumen de mi día', 'RESUMEN_DIA')} style={[styles.quickBtn, { borderColor: colors.border }]}>
+              <Sun color="#d97706" size={20} />
+              <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Resumen del Día</Text>
+            </TouchableOpacity>
+          </ScrollView>
+
+          <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: isListening ? colors.danger : colors.border }]}>
+            <TouchableOpacity onPress={() => setModalModeloVisible(true)} style={[styles.modelSelector, { backgroundColor: colors.surface }]}>
+              {modeloIA === 'Luma Cloud' ? <Cloud color={colors.primary} size={16} /> : <Server color={colors.primary} size={16} />}
+              <Text style={{ color: colors.textPrimary, fontSize: typography.xs, fontWeight: 'bold', marginHorizontal: 4 }}>{modeloIA === 'Luma Cloud' ? 'Cloud' : 'Local'}</Text>
+              <ChevronDown color={colors.textSecondary} size={16} />
+            </TouchableOpacity>
+
+            <TextInput
+              style={[styles.textInput, { color: colors.textPrimary, fontSize: typography.base }]}
+              placeholder={isListening ? "Escuchando..." : "Escribe tu mensaje..."}
+              placeholderTextColor={isListening ? colors.danger : colors.textSecondary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={200}
+              editable={!isListening}
+            />
+
+            <View style={styles.actionRight}>
+              {inputText.trim().length > 0 ? (
+                <TouchableOpacity onPress={() => hacerPregunta(inputText)} style={[styles.sendBtn, { backgroundColor: colors.primary }]}>
+                  <Send color="#fff" size={20} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={handleMicPress} style={[styles.micBtn, { backgroundColor: isListening ? colors.danger : colors.surface }]}>
+                  <Mic color={isListening ? '#fff' : colors.textPrimary} size={24} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+
+        <Modal animationType="fade" transparent={true} visible={modalModeloVisible} onRequestClose={() => setModalModeloVisible(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setModalModeloVisible(false)}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <View style={[styles.modalHandler, { backgroundColor: colors.border }]} />
+              <Text style={{ fontSize: typography.h2, fontWeight: '900', color: colors.textPrimary, marginBottom: 20, textAlign: 'center' }}>Motor de Inteligencia</Text>
+
+              <TouchableOpacity style={[styles.modalOption, { borderColor: modeloIA === 'Luma Cloud' ? colors.primary : colors.border, backgroundColor: modeloIA === 'Luma Cloud' ? colors.primaryLight : colors.surface }]} onPress={() => { setModeloIA('Luma Cloud'); setModalModeloVisible(false); }}>
+                <View style={[styles.optionIcon, { backgroundColor: '#e0e7ff' }]}><Cloud color={colors.primary} size={28} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>Luma Cloud</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: typography.sm, marginTop: 2 }}>Respuestas rápidas vía API en la nube.</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.modalOption, { borderColor: modeloIA === 'Llama 3.2 Local' ? colors.primary : colors.border, backgroundColor: modeloIA === 'Llama 3.2 Local' ? colors.primaryLight : colors.surface }]} onPress={() => { setModeloIA('Llama 3.2 Local'); setModalModeloVisible(false); }}>
+                <View style={[styles.optionIcon, { backgroundColor: '#dcfce7' }]}><Server color="#16a34a" size={28} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>Llama 3.2 Local</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: typography.sm, marginTop: 2 }}>Procesamiento 100% privado en tu servidor local vía Ollama.</Text>
+                </View>
+              </TouchableOpacity>
+
+            </View>
+          </Pressable>
+        </Modal>
+
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 2 },
+  backButton: { padding: 8, backgroundColor: '#f1f5f9', borderRadius: 16, marginRight: 16 },
+  headerTitleContainer: { flexDirection: 'row', alignItems: 'center' },
+  chatContainer: { padding: 20, paddingBottom: 20, gap: 24 },
+  messageRow: { flexDirection: 'row', width: '100%', marginBottom: 16 },
+  rowReverse: { justifyContent: 'flex-end' },
+  rowNormal: { justifyContent: 'flex-start' },
+  botAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 4 },
+  bubble: { padding: 16, borderRadius: 24, borderWidth: 2, maxWidth: '90%' },
+  audioButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 100, marginTop: 8, marginLeft: 4 },
+  bottomArea: { borderTopWidth: 2, paddingVertical: 12, paddingBottom: 16 },
+  bottomScroll: { paddingHorizontal: 16, gap: 12, marginBottom: 16 },
+  quickBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 2, borderRadius: 100, paddingHorizontal: 16, paddingVertical: 10, height: 48 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, borderWidth: 2, borderRadius: 32, padding: 8, minHeight: 64 },
+  modelSelector: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 100, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1 },
+  textInput: { flex: 1, marginHorizontal: 12, paddingVertical: 8, maxHeight: 100 },
+  actionRight: { justifyContent: 'center', alignItems: 'center', width: 44, height: 44 },
+  micBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+  modalHandler: { width: 48, height: 6, borderRadius: 3, alignSelf: 'center', marginBottom: 24 },
+  modalOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderRadius: 24, marginBottom: 12 },
+  optionIcon: { padding: 12, borderRadius: 16, marginRight: 16 },
+});
+
+================
+File: src/screens/DashboardScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/DashboardScreen.tsx
+
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Pill, Stethoscope, Check, LogOut, AlertCircle, Phone, Clock } from 'lucide-react-native';
+
+import { useAuthStore } from '../store/useAuthStore';
+import { useAppTheme } from '../store/useThemeStore';
+import { obtenerMedicamentos } from '../services/medicamentos.service';
+import { obtenerCitas } from '../services/citas.service';
+import { obtenerTomasHoy, confirmarToma } from '../services/registros-toma.service';
+
+export const DashboardScreen = ({ navigation }: any) => {
+  const { rol, usuarioId, logout } = useAuthStore();
+  const { colors, typography } = useAppTheme();
+  const queryClient = useQueryClient();
+
+  const handleLogout = () => logout();
+
+  const fechaGenerada = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+  const fechaFormateada = fechaGenerada.split(', ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(', ');
+
+  // 1. QUERIES REALES
+  const { data: medicamentos = [], isLoading: loadMed, isError: errMed } = useQuery({
+    queryKey: ['medicamentos', usuarioId],
+    queryFn: () => obtenerMedicamentos(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  const { data: citas = [], isLoading: loadCitas, isError: errCitas } = useQuery({
+    queryKey: ['citas', usuarioId],
+    queryFn: () => obtenerCitas(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  // NUEVA QUERY: Obtenemos las tomas confirmadas de hoy desde MongoDB
+  const { data: tomasHoy = [], isLoading: loadTomas } = useQuery({
+    queryKey: ['tomasHoy', usuarioId],
+    queryFn: () => obtenerTomasHoy(usuarioId!),
+    enabled: !!usuarioId,
+  });
+
+  // Convertimos el arreglo de tomas de hoy en un Set (buscando por medicamento_id) para validación rápida O(1)
+  const idsConfirmados = new Set(tomasHoy.map((toma: any) => toma.medicamento_id));
+
+  // 2. MUTACIÓN (Actualizada para invalidar caché)
+  const mutationToma = useMutation({
+    mutationFn: (medicamento_id: string) => confirmarToma(medicamento_id),
+    onSuccess: () => {
+      // Obliga a React Query a volver a ejecutar "obtenerTomasHoy", actualizando la UI de inmediato y asegurando la BD.
+      queryClient.invalidateQueries({ queryKey: ['tomasHoy', usuarioId] });
+    }
+  });
+
+  const isLoading = loadMed || loadCitas || loadTomas;
+  const isError = errMed || errCitas;
+
+  const hoy = new Date();
+  const citasDeHoy = citas.filter(cita => {
+    const fechaCita = new Date(cita.fecha_hora);
+    return fechaCita.getDate() === hoy.getDate() && fechaCita.getMonth() === hoy.getMonth() && fechaCita.getFullYear() === hoy.getFullYear();
+  });
+
+  const handleConfirmarToma = (id: string) => {
+    if (!idsConfirmados.has(id)) {
+      mutationToma.mutate(id);
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        
+        {/* HEADER CON LOGO */}
+        <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            <Image 
+              source={require('../../assets/logo_LumaIA.png')} 
+              style={{ width: 60, height: 60, resizeMode: 'contain', marginRight: 12 }} 
+            />
+            <View>
+              <Text style={[styles.welcomeText, { color: colors.textSecondary, fontSize: typography.xs }]}>BIENVENIDO</Text>
+              <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary }}>
+                {rol || 'Usuario'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <LogOut color={colors.textSecondary} size={28} />
+          </TouchableOpacity>
+        </View>
+
+        {/* BOTÓN SOS */}
+        <TouchableOpacity 
+          style={[styles.sosButton, { backgroundColor: colors.danger, borderBottomColor: '#9f1239' }]}
+          onPress={() => navigation.navigate('Apoyo')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.sosIconContainer}>
+            <Phone color="#ffffff" size={28} />
+          </View>
+          <Text style={[styles.sosText, { fontSize: typography.h2 }]}>EMERGENCIA SOS</Text>
+        </TouchableOpacity>
+
+        <View style={styles.dateContainer}>
+          <Clock color={colors.textSecondary} size={20} />
+          <Text style={[styles.dateText, { color: colors.textSecondary, fontSize: typography.lg }]}>
+            {fechaFormateada}
+          </Text>
+        </View>
+
+        {isLoading && (
+          <View style={[styles.emptyCard, { borderColor: colors.border }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: typography.base, marginTop: 16 }}>Preparando tu día...</Text>
+          </View>
+        )}
+
+        {isError && (
+          <View style={[styles.errorCard, { backgroundColor: '#ffe4e6', borderColor: colors.danger }]}>
+            <AlertCircle color={colors.danger} size={32} />
+            <Text style={{ color: colors.danger, fontSize: typography.base, marginLeft: 12, flex: 1, fontWeight: 'bold' }}>
+              Ocurrió un problema al cargar tu información.
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && !isError && (
+          <View style={styles.listContainer}>
+            
+            {/* MEDICAMENTOS */}
+            {medicamentos.map((med) => {
+              // Validamos el estado real contra la base de datos
+              const isConfirmado = idsConfirmados.has(med._id);
+              
+              const cardBg = isConfirmado ? colors.successLight : colors.surface;
+              const cardBorder = isConfirmado ? colors.success : colors.border;
+              
+              return (
+                <View key={med._id} style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                  <View style={styles.cardHeader}>
+                    <View style={[styles.iconBox, { backgroundColor: isConfirmado ? '#bbf7d0' : colors.primaryLight }]}>
+                      <Pill color={isConfirmado ? colors.success : colors.primary} size={28} />
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={[styles.medTitle, { color: colors.textPrimary, fontSize: typography.h2, textDecorationLine: isConfirmado ? 'line-through' : 'none' }]}>
+                        {med.nombre_farmaco}
+                      </Text>
+                      <Text style={{ color: isConfirmado ? colors.success : colors.primary, fontSize: typography.lg, fontWeight: 'bold' }}>
+                        {med.horarios_especificos?.length > 0 ? `A las ${med.horarios_especificos[0]}` : `Cada ${med.frecuencia_horas} hrs`}
+                      </Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: typography.base }}>Dosis: {med.dosis}</Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    disabled={isConfirmado || mutationToma.isPending}
+                    onPress={() => handleConfirmarToma(med._id)}
+                    style={[styles.actionButton, { 
+                      backgroundColor: isConfirmado ? colors.successLight : colors.primary,
+                      borderColor: isConfirmado ? colors.success : '#1e40af',
+                      borderBottomWidth: isConfirmado ? 2 : 4
+                    }]}
+                  >
+                    {mutationToma.isPending && !isConfirmado ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Text style={{ color: isConfirmado ? colors.success : '#fff', fontSize: typography.lg, fontWeight: 'bold', marginRight: 8 }}>
+                          {isConfirmado ? 'Toma Confirmada' : 'Ya lo tomé'}
+                        </Text>
+                        <Check color={isConfirmado ? colors.success : '#fff'} size={24} strokeWidth={3} />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+
+            {/* CITAS */}
+            {citasDeHoy.map((cita) => (
+              <View key={cita._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftWidth: 6, borderLeftColor: colors.warning }]}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: '#e0e7ff' }]}>
+                    <Stethoscope color={colors.warning} size={28} />
+                  </View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.medTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>
+                      {cita.titulo_evento}
+                    </Text>
+                    <View style={styles.row}>
+                      <View style={{ backgroundColor: '#e0e7ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 8 }}>
+                        <Text style={{ color: colors.warning, fontWeight: 'bold', fontSize: typography.sm }}>
+                          {new Date(cita.fecha_hora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+                      {cita.ubicacion && (
+                        <Text style={{ color: colors.textSecondary, fontSize: typography.sm, flexShrink: 1 }}>{cita.ubicacion}</Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            {/* EMPTY STATE */}
+            {medicamentos.length === 0 && citasDeHoy.length === 0 && (
+              <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <View style={{ backgroundColor: '#f1f5f9', padding: 16, borderRadius: 100, marginBottom: 16 }}>
+                  <Check color="#94a3b8" size={40} />
+                </View>
+                <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary }}>¡Todo al día!</Text>
+                <Text style={{ fontSize: typography.base, color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>
+                  No tienes tareas médicas pendientes para hoy.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { padding: 20, paddingBottom: 40 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 24, borderWidth: 2, marginBottom: 24 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  welcomeText: { fontWeight: 'bold', letterSpacing: 1, marginBottom: 2 },
+  logoutBtn: { padding: 8 },
+  sosButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, borderRadius: 24, borderBottomWidth: 4, marginBottom: 24 },
+  sosIconContainer: { backgroundColor: 'rgba(255,255,255,0.2)', padding: 8, borderRadius: 100, marginRight: 12 },
+  sosText: { color: '#ffffff', fontWeight: '900', letterSpacing: 1 },
+  dateContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  dateText: { fontWeight: 'bold', textTransform: 'capitalize', marginLeft: 8 },
+  listContainer: { gap: 16 },
+  card: { padding: 20, borderRadius: 24, borderWidth: 2, marginBottom: 16 },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  iconBox: { padding: 12, borderRadius: 16, marginRight: 16 },
+  cardInfo: { flex: 1 },
+  medTitle: { fontWeight: '900', marginBottom: 4 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, marginTop: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  emptyCard: { padding: 40, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center' },
+  errorCard: { padding: 20, borderRadius: 24, borderWidth: 2, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }
+});
+
+================
+File: src/services/citas.service.ts
+================
+// [MÓVIL] Ruta: src/services/citas.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { Cita } from '../types';
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  throw new Error('Ocurrió un error inesperado al conectar con el servidor.');
+};
+
+export const obtenerCitas = async (usuario_id: string): Promise<Cita[]> => {
+  const query = `
+    query ObtenerCitas($usuario_id: ID!) {
+      obtenerCitasPorUsuario(usuario_id: $usuario_id) {
+        _id
+        titulo_evento
+        fecha_hora
+        ubicacion
+        estado
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query, variables: { usuario_id } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.obtenerCitasPorUsuario || [];
+  } catch (error) {
+    handleGraphQLError(error);
+    return [];
+  }
+};
+
+export interface CreateCitaInput {
+  usuario_id: string;
+  titulo_evento: string;
+  fecha_hora: string;
+  ubicacion?: string;
+}
+
+export const crearCita = async (input: CreateCitaInput): Promise<Cita> => {
+  const mutation = `
+    mutation CrearCita($input: CreateCitaInput!) {
+      crearCita(createCitaInput: $input) {
+        _id
+        titulo_evento
+        fecha_hora
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query: mutation, variables: { input } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.crearCita;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/services/ia.service.ts
+================
+// [MÓVIL] Ruta: src/services/ia.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+
+export interface ConsultarAsistenteInput {
+  usuario_id: string;
+  pregunta_id: string;
+  modelo?: string; // <-- NUEVO: Parámetro opcional
+}
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  throw error;
+};
+
+export const consultarAsistente = async (input: ConsultarAsistenteInput): Promise<string> => {
+  if (!input.usuario_id) throw new Error("Sesión inactiva.");
+
+  // NUEVO: Agregamos el parámetro a la mutación GraphQL
+  const mutation = `
+    mutation ConsultarAsistente($usuario_id: ID!, $pregunta_id: String!, $modelo: String) {
+      consultarAsistente(usuario_id: $usuario_id, pregunta_id: $pregunta_id, modelo: $modelo)
+    }
+  `;
+
+  try {
+    const response = await apiClient.post('', {
+      query: mutation,
+      variables: input,
+    });
+
+    if (response.data.errors?.length > 0) {
+      throw new Error(response.data.errors[0].message);
+    }
+
+    return response.data.data.consultarAsistente;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/services/medicamentos.service.ts
+================
+// [MÓVIL] Ruta: src/services/medicamentos.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { Medicamento } from '../types';
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  throw new Error('Ocurrió un error inesperado al conectar con el servidor.');
+};
+
+export const obtenerMedicamentos = async (usuario_id: string): Promise<Medicamento[]> => {
+  const query = `
+    query ObtenerMedicamentos($usuario_id: ID!) {
+      obtenerMedicamentosPorUsuario(usuario_id: $usuario_id) {
+        _id
+        nombre_farmaco
+        dosis
+        frecuencia_horas
+        horarios_especificos
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query, variables: { usuario_id } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.obtenerMedicamentosPorUsuario || [];
+  } catch (error) {
+    handleGraphQLError(error);
+    return [];
+  }
+};
+
+export interface CreateMedicamentoInput {
+  usuario_id: string;
+  nombre_farmaco: string;
+  dosis: string;
+  frecuencia_horas?: number;
+  horarios_especificos: string[];
+}
+
+export const crearMedicamento = async (input: CreateMedicamentoInput): Promise<Medicamento> => {
+  const mutation = `
+    mutation CrearMedicamento($input: CreateMedicamentoInput!) {
+      crearMedicamento(createMedicamentoInput: $input) {
+        _id
+        nombre_farmaco
+        dosis
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query: mutation, variables: { input } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.crearMedicamento;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: src/services/registros-toma.service.ts
+================
+// [MÓVIL] Ruta: src/services/registros-toma.service.ts
+
+import axios from 'axios';
+import { apiClient } from '../config/api.client';
+import { RegistroToma } from '../types';
+
+const handleGraphQLError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response?.data?.errors) {
+    throw new Error(error.response.data.errors[0].message);
+  }
+  throw error;
+};
+
+// NUEVA QUERY
+export const obtenerTomasHoy = async (usuario_id: string): Promise<RegistroToma[]> => {
+  const query = `
+    query ObtenerTomasHoy($usuario_id: ID!) {
+      obtenerTomasHoy(usuario_id: $usuario_id) {
+        _id
+        medicamento_id
+        estado_toma
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query, variables: { usuario_id } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.obtenerTomasHoy || [];
+  } catch (error) {
+    handleGraphQLError(error);
+    return [];
+  }
+};
+
+// MUTACIÓN (Igual que antes)
+export const confirmarToma = async (medicamento_id: string): Promise<RegistroToma> => {
+  const mutation = `
+    mutation ConfirmarToma($medicamento_id: ID!) {
+      confirmarTomaMedicamento(medicamento_id: $medicamento_id) {
+        _id
+        estado_toma
+      }
+    }
+  `;
+  try {
+    const response = await apiClient.post('', { query: mutation, variables: { medicamento_id } });
+    if (response.data.errors?.length > 0) throw new Error(response.data.errors[0].message);
+    return response.data.data.confirmarTomaMedicamento;
+  } catch (error) {
+    handleGraphQLError(error);
+    throw error;
+  }
+};
+
+================
+File: app.json
+================
+{
+  "expo": {
+    "name": "lumaia-mobile",
+    "slug": "lumaia-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}
+
+================
+File: App.tsx
+================
+// [MÓVIL] Ruta: App.tsx
+
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RootNavigator } from './src/navigation/RootNavigator';
+
+const queryClient = new QueryClient({
+  defaultOptions: { 
+    queries: { 
+      refetchOnWindowFocus: false, 
+      retry: 1 
+    } 
+  },
+});
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </QueryClientProvider>
+  );
+}
+
+================
+File: src/screens/AgendaScreen.tsx
+================
+// [MÓVIL] Ruta: src/screens/AgendaScreen.tsx
+
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar, MapPin, Clock, Pill, Stethoscope, CheckCircle, Plus, StickyNote, X } from 'lucide-react-native';
+
+import { useAuthStore } from '../store/useAuthStore';
+import { useAppTheme } from '../store/useThemeStore';
+import { obtenerMedicamentos, crearMedicamento } from '../services/medicamentos.service';
+import { obtenerCitas, crearCita } from '../services/citas.service';
+import { obtenerNotas, crearNota } from '../services/notas.service';
+
+type FiltroType = 'Todo' | 'Citas' | 'Medicamentos' | 'Notas';
+type ModalState = 'none' | 'menu' | 'medicamento' | 'cita' | 'nota';
+
+export const AgendaScreen = () => {
+  const { usuarioId } = useAuthStore();
+  const { colors, typography } = useAppTheme();
+  const queryClient = useQueryClient();
+  
+  const [filtro, setFiltro] = useState<FiltroType>('Todo');
+  const [modalVisible, setModalVisible] = useState<ModalState>('none');
+
+  const [medNombre, setMedNombre] = useState('');
+  const [medDosis, setMedDosis] = useState('');
+  const [medFrecuencia, setMedFrecuencia] = useState('');
+  const [medPrimeraToma, setMedPrimeraToma] = useState(new Date());
+  const [showMedTimePicker, setShowMedTimePicker] = useState(false);
+
+  const [citaTitulo, setCitaTitulo] = useState('');
+  const [citaUbicacion, setCitaUbicacion] = useState('');
+  const [citaFechaObj, setCitaFechaObj] = useState(new Date());
+  const [citaHoraObj, setCitaHoraObj] = useState(new Date());
+  const [showCitaDatePicker, setShowCitaDatePicker] = useState(false);
+  const [showCitaTimePicker, setShowCitaTimePicker] = useState(false);
+
+  const [notaContenido, setNotaContenido] = useState('');
+
+  const { data: medicamentos = [], isLoading: loadMed } = useQuery({ queryKey: ['medicamentos', usuarioId], queryFn: () => obtenerMedicamentos(usuarioId!), enabled: !!usuarioId });
+  const { data: citas = [], isLoading: loadCitas } = useQuery({ queryKey: ['citas', usuarioId], queryFn: () => obtenerCitas(usuarioId!), enabled: !!usuarioId });
+  const { data: notas = [], isLoading: loadNotas } = useQuery({ queryKey: ['notas', usuarioId], queryFn: () => obtenerNotas(usuarioId!), enabled: !!usuarioId });
+
+  const isLoading = loadMed || loadCitas || loadNotas;
+  const mostrarCitas = filtro === 'Todo' || filtro === 'Citas';
+  const mostrarMedicamentos = filtro === 'Todo' || filtro === 'Medicamentos';
+  const mostrarNotas = filtro === 'Todo' || filtro === 'Notas';
+
+  const emptyState = (!isLoading && 
+    ((mostrarCitas && citas.length === 0 && !mostrarMedicamentos && !mostrarNotas) || 
+    (mostrarMedicamentos && medicamentos.length === 0 && !mostrarCitas && !mostrarNotas) || 
+    (mostrarNotas && notas.length === 0 && !mostrarCitas && !mostrarMedicamentos) ||
+    (filtro === 'Todo' && citas.length === 0 && medicamentos.length === 0 && notas.length === 0))
+  );
+
+  const mutMed = useMutation({
+    mutationFn: () => {
+      const hh = medPrimeraToma.getHours().toString().padStart(2, '0');
+      const mm = medPrimeraToma.getMinutes().toString().padStart(2, '0');
+      return crearMedicamento({ usuario_id: usuarioId!, nombre_farmaco: medNombre.trim(), dosis: medDosis.trim(), frecuencia_horas: parseInt(medFrecuencia) || 24, horarios_especificos: [`${hh}:${mm}`] });
+    },
+    onSuccess: () => resetAndClose('¡Medicamento guardado con éxito!', 'medicamentos')
+  });
+
+  const mutCita = useMutation({
+    mutationFn: () => {
+      const isoDate = new Date(citaFechaObj.getFullYear(), citaFechaObj.getMonth(), citaFechaObj.getDate(), citaHoraObj.getHours(), citaHoraObj.getMinutes()).toISOString();
+      return crearCita({ usuario_id: usuarioId!, titulo_evento: citaTitulo.trim(), fecha_hora: isoDate, ubicacion: citaUbicacion.trim() });
+    },
+    onSuccess: () => resetAndClose('¡Cita programada con éxito!', 'citas')
+  });
+
+  const mutNota = useMutation({
+    mutationFn: () => crearNota({ usuario_id: usuarioId!, contenido: notaContenido.trim(), fecha_creacion: new Date().toISOString() }),
+    onSuccess: () => resetAndClose('¡Apunte guardado con éxito!', 'notas')
+  });
+
+  const resetAndClose = (mensaje: string, queryKey: string) => {
+    Alert.alert('Éxito', mensaje);
+    setModalVisible('none');
+    setMedNombre(''); setMedDosis(''); setMedFrecuencia(''); setMedPrimeraToma(new Date());
+    setCitaTitulo(''); setCitaUbicacion(''); setCitaFechaObj(new Date()); setCitaHoraObj(new Date());
+    setNotaContenido('');
+    queryClient.invalidateQueries({ queryKey: [queryKey, usuarioId] });
+  };
+
+  const onChangeMedTime = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') setShowMedTimePicker(false);
+    if (selectedDate) setMedPrimeraToma(selectedDate);
+  };
+  const onChangeCitaDate = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') setShowCitaDatePicker(false);
+    if (selectedDate) setCitaFechaObj(selectedDate);
+  };
+  const onChangeCitaTime = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') setShowCitaTimePicker(false);
+    if (selectedDate) setCitaHoraObj(selectedDate);
+  };
+
+  const formatTimeUI = (date: Date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  const formatDateUI = (date: Date) => date.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Mi Agenda</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
+          {(['Todo', 'Citas', 'Medicamentos', 'Notas'] as FiltroType[]).map((opcion) => (
+            <TouchableOpacity key={opcion} onPress={() => setFiltro(opcion)} activeOpacity={0.8}
+              style={[styles.filterPill, { backgroundColor: filtro === opcion ? colors.primary : colors.background, borderColor: filtro === opcion ? colors.primary : colors.border }]}>
+              <Text style={{ color: filtro === opcion ? '#fff' : colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }}>{opcion}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {isLoading && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: typography.lg, marginTop: 16, fontWeight: 'bold' }}>Sincronizando agenda...</Text>
+          </View>
+        )}
+
+        {!isLoading && (
+          <View style={styles.listContainer}>
+            {mostrarCitas && citas.map((cita) => (
+              <View key={cita._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.warning }]}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: colors.warning + '15' }]}><Stethoscope color={colors.warning} size={32} /></View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{cita.titulo_evento}</Text>
+                    <View style={styles.badgeContainer}><Text style={[styles.badgeText, { color: colors.warning, fontSize: typography.sm }]}>CITA MÉDICA</Text></View>
+                  </View>
+                </View>
+                <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
+                  <View style={styles.detailRow}>
+                    <Calendar color={colors.textSecondary} size={20} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base }]}>{new Date(cita.fecha_hora).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })} a las {new Date(cita.fecha_hora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</Text>
+                  </View>
+                  {cita.ubicacion && (
+                    <View style={[styles.detailRow, { marginTop: 8 }]}>
+                      <MapPin color={colors.textSecondary} size={20} />
+                      <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base }]}>{cita.ubicacion}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ))}
+
+            {mostrarMedicamentos && medicamentos.map((med) => (
+              <View key={med._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.primary }]}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}><Pill color={colors.primary} size={32} /></View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{med.nombre_farmaco}</Text>
+                    <View style={styles.badgeContainerPrimary}><Text style={[styles.badgeTextPrimary, { color: colors.primary, fontSize: typography.sm }]}>MEDICAMENTO</Text></View>
+                  </View>
+                </View>
+                <View style={[styles.cardDetails, { borderTopColor: colors.border }]}>
+                  <View style={styles.detailRow}>
+                    <Clock color={colors.textSecondary} size={20} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }]}>A las {med.horarios_especificos?.join(', ')} • Cada {med.frecuencia_horas} hrs</Text>
+                  </View>
+                  <View style={[styles.detailRow, { marginTop: 8 }]}>
+                    <CheckCircle color={colors.textSecondary} size={20} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: typography.base }]}>Dosis: {med.dosis}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            {mostrarNotas && notas.map((nota) => (
+              <View key={nota._id} style={[styles.card, { backgroundColor: '#fefce8', borderColor: '#fde047', borderLeftColor: '#eab308' }]}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}><StickyNote color="#ca8a04" size={32} /></View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>{nota.contenido}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: typography.sm, marginTop: 4 }}>{new Date(nota.fecha_creacion).toLocaleDateString('es-MX')}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            {emptyState && (
+              <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <View style={{ backgroundColor: colors.background, padding: 20, borderRadius: 100, marginBottom: 16 }}><Calendar color={colors.textSecondary} size={48} /></View>
+                <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary }}>Agenda Limpia</Text>
+                <Text style={{ fontSize: typography.lg, color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>No tienes eventos registrados para este filtro.</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]} activeOpacity={0.8} onPress={() => setModalVisible('menu')}>
+        <Plus color="#ffffff" size={36} strokeWidth={3} />
+      </TouchableOpacity>
+
+      <Modal animationType="slide" transparent={true} visible={modalVisible !== 'none'} onRequestClose={() => setModalVisible('none')}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              
+              <View style={styles.modalHeader}>
+                <Text style={{ fontSize: typography.h2, fontWeight: '900', color: colors.textPrimary }}>
+                  {modalVisible === 'menu' && '¿Qué deseas agregar?'}
+                  {modalVisible === 'medicamento' && 'Nuevo Tratamiento'}
+                  {modalVisible === 'cita' && 'Nueva Cita Médica'}
+                  {modalVisible === 'nota' && 'Nuevo Apunte'}
+                </Text>
+                <TouchableOpacity onPress={() => setModalVisible('none')} style={{ padding: 8, backgroundColor: colors.background, borderRadius: 100 }}>
+                  <X color={colors.textSecondary} size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                
+                {modalVisible === 'menu' && (
+                  <View>
+                    <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('medicamento')}>
+                      <View style={[styles.menuIconBox, { backgroundColor: colors.primaryLight }]}><Pill color={colors.primary} size={32} /></View>
+                      <Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Medicamento</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('cita')}>
+                      <View style={[styles.menuIconBox, { backgroundColor: colors.warning + '15' }]}><Calendar color={colors.warning} size={32} /></View>
+                      <Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Cita Médica</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.menuBtn, { borderColor: colors.border }]} onPress={() => setModalVisible('nota')}>
+                      <View style={[styles.menuIconBox, { backgroundColor: '#fef08a' }]}><StickyNote color="#ca8a04" size={32} /></View>
+                      <Text style={[styles.menuBtnText, { color: colors.textPrimary, fontSize: typography.xl }]}>Nota Personal</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {modalVisible === 'medicamento' && (
+                  <View style={{ paddingBottom: 20 }}>
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Nombre del Fármaco</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Losartán" placeholderTextColor={colors.textSecondary} value={medNombre} onChangeText={setMedNombre} />
+                    
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Dosis Recomendada</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. 1 Pastilla" placeholderTextColor={colors.textSecondary} value={medDosis} onChangeText={setMedDosis} />
+                    
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Frecuencia (Cada cuántas horas)</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. 8" keyboardType="numeric" placeholderTextColor={colors.textSecondary} value={medFrecuencia} onChangeText={setMedFrecuencia} />
+                    
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>¿A qué hora es la primera toma?</Text>
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowMedTimePicker(true)}>
+                      <Clock color={colors.primary} size={24} style={{ marginRight: 12 }} />
+                      <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>{formatTimeUI(medPrimeraToma)}</Text>
+                    </TouchableOpacity>
+                    {showMedTimePicker && (<DateTimePicker value={medPrimeraToma} mode="time" display="default" onChange={onChangeMedTime} />)}
+
+                    <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutMed.isPending ? 0.7 : 1 }]} onPress={() => mutMed.mutate()} disabled={mutMed.isPending || !medNombre || !medDosis}>
+                      {mutMed.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Guardar</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {modalVisible === 'cita' && (
+                  <View style={{ paddingBottom: 20 }}>
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>Motivo o Especialidad</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Cardiólogo" placeholderTextColor={colors.textSecondary} value={citaTitulo} onChangeText={setCitaTitulo} />
+                    
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Día de la cita</Text>
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowCitaDatePicker(true)}>
+                      <Calendar color={colors.warning} size={24} style={{ marginRight: 12 }} />
+                      <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold', textTransform: 'capitalize' }}>{formatDateUI(citaFechaObj)}</Text>
+                    </TouchableOpacity>
+                    {showCitaDatePicker && (<DateTimePicker value={citaFechaObj} mode="date" display="default" minimumDate={new Date()} onChange={onChangeCitaDate} />)}
+
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Hora</Text>
+                    <TouchableOpacity style={[styles.inputBtn, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => setShowCitaTimePicker(true)}>
+                      <Clock color={colors.warning} size={24} style={{ marginRight: 12 }} />
+                      <Text style={{ color: colors.textPrimary, fontSize: typography.lg, fontWeight: 'bold' }}>{formatTimeUI(citaHoraObj)}</Text>
+                    </TouchableOpacity>
+                    {showCitaTimePicker && (<DateTimePicker value={citaHoraObj} mode="time" display="default" onChange={onChangeCitaTime} />)}
+
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg, marginTop: 16 }]}>Ubicación (Opcional)</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg }]} placeholder="Ej. Clínica Centro" placeholderTextColor={colors.textSecondary} value={citaUbicacion} onChangeText={setCitaUbicacion} />
+                    
+                    <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutCita.isPending ? 0.7 : 1 }]} onPress={() => mutCita.mutate()} disabled={mutCita.isPending || !citaTitulo}>
+                      {mutCita.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Programar Cita</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {modalVisible === 'nota' && (
+                  <View style={{ paddingBottom: 20 }}>
+                    <Text style={[styles.label, { color: colors.textPrimary, fontSize: typography.lg }]}>¿Qué deseas recordar?</Text>
+                    <TextInput style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, fontSize: typography.lg, minHeight: 120, textAlignVertical: 'top', paddingTop: 16 }]} placeholder="Escribe tu apunte aquí..." placeholderTextColor={colors.textSecondary} multiline value={notaContenido} onChangeText={setNotaContenido} />
+                    
+                    <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutNota.isPending ? 0.7 : 1 }]} onPress={() => mutNota.mutate()} disabled={mutNota.isPending || !notaContenido}>
+                      {mutNota.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.h2, fontWeight: '900' }}>Guardar Apunte</Text>}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  header: { padding: 20, paddingBottom: 16, borderBottomWidth: 2 },
+  headerTitle: { fontWeight: '900', marginBottom: 16 },
+  filterContainer: { gap: 12, paddingRight: 20 },
+  filterPill: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 100, borderWidth: 2, minHeight: 48, justifyContent: 'center' },
+  scrollContent: { flexGrow: 1, padding: 20, paddingBottom: 100 }, 
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
+  listContainer: { gap: 16 },
+  card: { borderRadius: 24, borderWidth: 2, borderLeftWidth: 8, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', padding: 20, alignItems: 'center' },
+  iconBox: { padding: 12, borderRadius: 16, marginRight: 16 },
+  cardInfo: { flex: 1 },
+  cardTitle: { fontWeight: '900', marginBottom: 6 },
+  badgeContainer: { alignSelf: 'flex-start', backgroundColor: '#eef2ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontWeight: '900', letterSpacing: 0.5 },
+  badgeContainerPrimary: { alignSelf: 'flex-start', backgroundColor: '#eff6ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgeTextPrimary: { fontWeight: '900', letterSpacing: 0.5 },
+  cardDetails: { padding: 20, paddingTop: 16, borderTopWidth: 2, backgroundColor: '#fafafa' },
+  detailRow: { flexDirection: 'row', alignItems: 'center' },
+  detailText: { marginLeft: 12, fontWeight: '600', flex: 1 },
+  emptyCard: { padding: 40, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', marginTop: 20 },
+  fab: { position: 'absolute', bottom: 24, right: 24, width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 10 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  menuBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, borderWidth: 2, borderRadius: 24, marginBottom: 16 },
+  menuIconBox: { padding: 12, borderRadius: 16, marginRight: 16 },
+  menuBtnText: { fontWeight: 'bold' },
+  label: { fontWeight: '900', marginBottom: 8 },
+  input: { borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64, fontWeight: '600', backgroundColor: '#fff' },
+  inputBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64 },
+  submitBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 64, borderRadius: 20, borderBottomWidth: 4, marginTop: 32 },
+});
+
+================
+File: package.json
+================
+{
+  "name": "lumaia-mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "9.1.0",
+    "@react-navigation/bottom-tabs": "^7.21.0",
+    "@react-navigation/native": "^7.5.1",
+    "@react-navigation/native-stack": "^7.21.0",
+    "@tanstack/react-query": "^5.104.4",
+    "axios": "^1.20.0",
+    "expo": "~57.0.30",
+    "expo-av": "^16.0.8",
+    "expo-file-system": "~57.0.7",
+    "expo-image-picker": "~57.0.20",
+    "expo-speech": "~57.0.3",
+    "expo-status-bar": "~57.0.1",
+    "lucide-react-native": "^1.59.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.2",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "private": true
+}
+
+
+
+
+
+================================================================
+End of Codebase
+================================================================

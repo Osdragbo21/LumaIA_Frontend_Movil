@@ -1,7 +1,7 @@
 // [MÓVIL] Ruta: src/screens/ApoyoScreen.tsx
 
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Phone, AlertTriangle, User, Heart, MessageCircle, Plus, X, Users } from 'lucide-react-native';
@@ -15,20 +15,18 @@ export const ApoyoScreen = () => {
   const { usuarioId } = useAuthStore();
   const queryClient = useQueryClient();
 
-  // Estados del Modal y Formulario
   const [modalVisible, setModalVisible] = useState(false);
   const [nombreContacto, setNombreContacto] = useState('');
   const [telefonoContacto, setTelefonoContacto] = useState('');
   const [parentescoContacto, setParentescoContacto] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // 1. Obtener el perfil del usuario actual (Adulto Mayor)
   const { data: perfil, isLoading: loadPerfil, isError: errPerfil } = useQuery({
     queryKey: ['perfil', usuarioId],
     queryFn: () => obtenerPerfilUsuario(usuarioId!),
     enabled: !!usuarioId,
   });
 
-  // 2. Si tiene un cuidador vinculado, obtener los datos del cuidador
   const cuidadorId = perfil?.cuidador_vinculado_id;
   const { data: cuidador, isLoading: loadCuidador } = useQuery({
     queryKey: ['perfil', cuidadorId],
@@ -39,7 +37,16 @@ export const ApoyoScreen = () => {
   const contactos = perfil?.contactos_emergencia || [];
   const isLoading = loadPerfil || loadCuidador;
 
-  // 3. Mutación para agregar contacto
+  // CORRECCIÓN: Función para el Pull-to-Refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['perfil', usuarioId] });
+    if (cuidadorId) {
+      await queryClient.invalidateQueries({ queryKey: ['perfil', cuidadorId] });
+    }
+    setRefreshing(false);
+  }, [queryClient, usuarioId, cuidadorId]);
+
   const addContactMutation = useMutation({
     mutationFn: (input: AgregarContactoInput) => agregarContactoEmergencia(input),
     onSuccess: () => {
@@ -48,7 +55,6 @@ export const ApoyoScreen = () => {
       setNombreContacto('');
       setTelefonoContacto('');
       setParentescoContacto('');
-      // Invalida la caché para que React Query haga un fetch automático en segundo plano
       queryClient.invalidateQueries({ queryKey: ['perfil', usuarioId] });
     },
     onError: (error: Error) => {
@@ -56,7 +62,6 @@ export const ApoyoScreen = () => {
     }
   });
 
-  // Función para realizar llamadas nativas
   const hacerLlamada = (numero?: string) => {
     if (!numero) {
       Alert.alert('Aviso', 'Este contacto no tiene un número registrado.');
@@ -74,7 +79,6 @@ export const ApoyoScreen = () => {
       .catch((err) => console.error('Error al intentar llamar', err));
   };
 
-  // Botón SOS: Llama al primer contacto, o al cuidador si no hay contactos
   const handleSOS = () => {
     if (contactos.length > 0) {
       hacerLlamada(contactos[0].telefono);
@@ -99,7 +103,6 @@ export const ApoyoScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       
-      {/* CABECERA */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary, fontSize: typography.h1 }]}>Red de Apoyo</Text>
         <Text style={{ color: colors.textSecondary, fontSize: typography.lg, marginTop: 4, fontWeight: '600' }}>
@@ -107,9 +110,11 @@ export const ApoyoScreen = () => {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+      >
         
-        {/* BOTÓN MASIVO SOS */}
         <TouchableOpacity 
           style={[styles.sosButton, { backgroundColor: colors.danger, borderBottomColor: '#9f1239' }]}
           activeOpacity={0.8}
@@ -121,7 +126,7 @@ export const ApoyoScreen = () => {
           <Text style={[styles.sosText, { fontSize: typography.h1 }]}>LLAMADA DE{'\n'}EMERGENCIA</Text>
         </TouchableOpacity>
 
-        {isLoading ? (
+        {isLoading && !refreshing ? (
           <View style={{ padding: 40, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ color: colors.textSecondary, marginTop: 16, fontWeight: 'bold', fontSize: typography.lg }}>Cargando tu red...</Text>
@@ -132,7 +137,6 @@ export const ApoyoScreen = () => {
           </View>
         ) : (
           <>
-            {/* SECCIÓN CUIDADOR PRINCIPAL */}
             <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>Mi Cuidador Principal</Text>
             {cuidador ? (
               <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -162,7 +166,6 @@ export const ApoyoScreen = () => {
               </View>
             )}
 
-            {/* SECCIÓN OTROS CONTACTOS */}
             <View style={styles.sectionHeaderRow}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.xl, marginBottom: 0 }]}>Contactos Adicionales</Text>
               <TouchableOpacity 
@@ -209,7 +212,6 @@ export const ApoyoScreen = () => {
         )}
       </ScrollView>
 
-      {/* MODAL DE NUEVO CONTACTO */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -306,7 +308,6 @@ const styles = StyleSheet.create({
   callCircleBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   emptyCard: { padding: 32, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center' },
   
-  // Estilos del Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
