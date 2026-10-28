@@ -36,12 +36,20 @@ export const CuidadorVinculacionScreen = () => {
     }
   });
 
+  // CORRECCIÓN CRÍTICA: Función de llamadas robusta
   const hacerLlamada = (numero?: string) => {
     if (!numero) {
       Alert.alert('Aviso', 'El paciente no tiene un contacto de emergencia principal registrado.');
       return;
     }
-    Linking.openURL(`tel:${numero.replace(/\s+/g, '')}`);
+    
+    const numeroLimpio = numero.replace(/[\s\-\(\)]/g, '');
+    const url = Platform.OS === 'ios' ? `telprompt:${numeroLimpio}` : `tel:${numeroLimpio}`;
+
+    Linking.openURL(url).catch((err) => {
+      console.error('Error al intentar llamar', err);
+      Alert.alert('Error', 'No se pudo abrir la aplicación de teléfono. Asegúrate de estar en un dispositivo físico.');
+    });
   };
 
   return (
@@ -53,7 +61,6 @@ export const CuidadorVinculacionScreen = () => {
 
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* FORMULARIO VINCULACIÓN */}
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <UserPlus color={colors.primary} size={28} style={{ marginRight: 12 }} />
@@ -85,7 +92,6 @@ export const CuidadorVinculacionScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* DIRECTORIO */}
           <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: typography.xl }]}>Directorio de Pacientes</Text>
           
           {isLoading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />}

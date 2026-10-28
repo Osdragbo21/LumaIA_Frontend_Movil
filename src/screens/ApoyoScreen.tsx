@@ -37,7 +37,6 @@ export const ApoyoScreen = () => {
   const contactos = perfil?.contactos_emergencia || [];
   const isLoading = loadPerfil || loadCuidador;
 
-  // CORRECCIÓN: Función para el Pull-to-Refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await queryClient.invalidateQueries({ queryKey: ['perfil', usuarioId] });
@@ -62,21 +61,24 @@ export const ApoyoScreen = () => {
     }
   });
 
+  // CORRECCIÓN CRÍTICA: Función de llamadas robusta
   const hacerLlamada = (numero?: string) => {
     if (!numero) {
       Alert.alert('Aviso', 'Este contacto no tiene un número registrado.');
       return;
     }
-    const url = `tel:${numero.replace(/\s+/g, '')}`;
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert('Error', 'Tu dispositivo no soporta realizar llamadas desde la app.');
-        }
-      })
-      .catch((err) => console.error('Error al intentar llamar', err));
+    
+    // Limpiamos el número de espacios, guiones o paréntesis
+    const numeroLimpio = numero.replace(/[\s\-\(\)]/g, '');
+    
+    // En iOS es mejor usar telprompt para que pida confirmación, en Android tel: directo
+    const url = Platform.OS === 'ios' ? `telprompt:${numeroLimpio}` : `tel:${numeroLimpio}`;
+
+    // Ejecutamos directamente sin validar canOpenURL para evitar bloqueos de seguridad del OS
+    Linking.openURL(url).catch((err) => {
+      console.error('Error al intentar llamar', err);
+      Alert.alert('Error', 'No se pudo abrir la aplicación de teléfono. Asegúrate de estar en un dispositivo físico.');
+    });
   };
 
   const handleSOS = () => {

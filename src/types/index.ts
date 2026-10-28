@@ -29,6 +29,7 @@ export interface Medicamento {
     dosis: string;
     frecuencia_horas?: number;
     horarios_especificos: string[];
+    fecha_eliminacion?: string;
 }
 
 export interface Cita {
@@ -38,6 +39,7 @@ export interface Cita {
     fecha_hora: string; 
     ubicacion?: string;
     estado: Enum_EstadoCita;
+    fecha_eliminacion?: string;
 }
 
 export interface RegistroToma {
@@ -46,4 +48,12 @@ export interface RegistroToma {
     fecha_programada: string; 
     estado_toma: Enum_EstadoToma;
     fecha_confirmacion?: string; 
+}
+
+export interface NotaPersonal {
+    _id: string;
+    usuario_id: string;
+    contenido: string;
+    fecha_creacion: string;
+    fecha_eliminacion?: string;
 }

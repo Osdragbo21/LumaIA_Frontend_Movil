@@ -5,13 +5,11 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
-import { ArrowLeft, Volume2, Pill, CalendarDays, Sparkles, CheckSquare, Sun, Mic, Send, ChevronDown, Cloud, Server, Square } from 'lucide-react-native';
+import { ArrowLeft, Volume2, Pill, CalendarDays, Sparkles, CheckSquare, Sun, Mic, Send, ChevronDown, Cloud, Server } from 'lucide-react-native';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppTheme } from '../store/useThemeStore';
-import { consultarAsistente, transcribirAudioIA } from '../services/ia.service';
+import { consultarAsistente } from '../services/ia.service';
 
 interface Mensaje {
   id: string;
@@ -33,17 +31,12 @@ export const ChatScreen = ({ navigation }: any) => {
   const [inputText, setInputText] = useState('');
   const [modeloIA, setModeloIA] = useState<ModeloIA>('Luma Cloud');
   const [modalModeloVisible, setModalModeloVisible] = useState(false);
-  
-  // ESTADOS DE AUDIO
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [isListening, setIsListening] = useState(false);
 
   const reproducirAudio = (texto: string) => {
     Speech.stop(); 
     Speech.speak(texto, { language: 'es-MX', rate: 0.9 });
   };
 
-  // 1. Mutación para la respuesta de la IA
   const mutation = useMutation({
     mutationFn: (pregunta_id: string) => consultarAsistente({ usuario_id: usuarioId!, pregunta_id, modelo: modeloIA }),
     onSuccess: (respuesta) => {
@@ -57,66 +50,22 @@ export const ChatScreen = ({ navigation }: any) => {
   });
 
   const hacerPregunta = (textoPregunta: string, idOculto?: string) => {
-    if (mutation.isPending || mutTranscribir.isPending) return;
+    if (mutation.isPending) return;
     const promptFinal = idOculto ? idOculto : textoPregunta;
     setHistorial(prev => [...prev, { id: Date.now().toString(), emisor: 'user', texto: textoPregunta }]);
     mutation.mutate(promptFinal);
     setInputText('');
   };
 
-  // 2. Mutación para transcribir el audio
-  const mutTranscribir = useMutation({
-    mutationFn: (base64: string) => transcribirAudioIA(base64),
-    onSuccess: (textoTranscrito) => {
-      // UX MEJORADA: En lugar de solo ponerlo en el input, lo enviamos automáticamente a la IA
-      hacerPregunta(textoTranscrito);
-    },
-    onError: () => {
-      Alert.alert('Error', 'No pudimos entender el audio. Por favor, intenta de nuevo.');
-    }
-  });
-
-  // 3. Lógica del Micrófono Nativo
-  const startRecordingMobile = async () => {
-    try {
-      const permission = await Audio.requestPermissionsAsync();
-      if (permission.status === 'granted') {
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-        const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-        setRecording(recording);
-        setIsListening(true);
-      } else {
-        Alert.alert('Permiso denegado', 'Necesitamos acceso al micrófono para escucharte.');
-      }
-    } catch (err) {
-      console.error('Failed to start recording', err);
-      Alert.alert('Error', 'No se pudo iniciar el micrófono. Verifica los permisos.');
-    }
-  };
-
-  const stopRecordingMobile = async () => {
-    if (!recording) return;
-    setIsListening(false);
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecording(null);
-    
-    if (uri) {
-       // Convertimos el audio a Base64 y lo enviamos al backend
-       const base64Audio = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-       mutTranscribir.mutate(base64Audio);
-    }
-  };
-
+  // Función Mock para el micrófono
   const handleMicPress = () => {
-    if (isListening) {
-      stopRecordingMobile();
-    } else {
-      startRecordingMobile();
-    }
+    Alert.alert(
+      'Próximamente', 
+      'El dictado por voz estará disponible en la versión final de la aplicación. Por favor, utiliza el teclado por ahora.'
+    );
   };
 
-  const isProcessing = mutation.isPending || mutTranscribir.isPending;
+  const isProcessing = mutation.isPending;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -159,14 +108,13 @@ export const ChatScreen = ({ navigation }: any) => {
             </View>
           ))}
           
-          {/* Indicador de carga unificado (Escuchando, Transcribiendo o Pensando) */}
-          {(isProcessing || isListening) && (
+          {isProcessing && (
             <View style={[styles.messageRow, styles.rowNormal]}>
               <View style={[styles.botAvatar, { backgroundColor: colors.primary }]}><Sparkles color="#fff" size={18} /></View>
               <View style={[styles.bubble, { backgroundColor: colors.surface, borderColor: colors.border, borderTopLeftRadius: 4, flexDirection: 'row', alignItems: 'center' }]}>
                 <ActivityIndicator color={colors.primary} size="small" style={{ marginRight: 8 }} />
                 <Text style={{ color: colors.textSecondary, fontSize: typography.base, fontWeight: 'bold' }}>
-                  {isListening ? 'Escuchando...' : mutTranscribir.isPending ? 'Transcribiendo...' : 'Pensando...'}
+                  Pensando...
                 </Text>
               </View>
             </View>
@@ -176,46 +124,46 @@ export const ChatScreen = ({ navigation }: any) => {
         <View style={[styles.bottomArea, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomScroll}>
-            <TouchableOpacity disabled={isProcessing || isListening} onPress={() => hacerPregunta('¿Cuál es mi próxima medicina?', 'PROXIMA_TOMA')} style={[styles.quickBtn, { borderColor: colors.border, opacity: (isProcessing || isListening) ? 0.5 : 1 }]}>
+            <TouchableOpacity disabled={isProcessing} onPress={() => hacerPregunta('¿Cuál es mi próxima medicina?', 'PROXIMA_TOMA')} style={[styles.quickBtn, { borderColor: colors.border, opacity: isProcessing ? 0.5 : 1 }]}>
               <Pill color={colors.primary} size={20} />
               <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Próxima Medicina</Text>
             </TouchableOpacity>
-            <TouchableOpacity disabled={isProcessing || isListening} onPress={() => hacerPregunta('¿Qué pastillas ya me tomé hoy?', 'TOMAS_REALIZADAS')} style={[styles.quickBtn, { borderColor: colors.border, opacity: (isProcessing || isListening) ? 0.5 : 1 }]}>
+            <TouchableOpacity disabled={isProcessing} onPress={() => hacerPregunta('¿Qué pastillas ya me tomé hoy?', 'TOMAS_REALIZADAS')} style={[styles.quickBtn, { borderColor: colors.border, opacity: isProcessing ? 0.5 : 1 }]}>
               <CheckSquare color={colors.success} size={20} />
               <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Ya Tomadas</Text>
             </TouchableOpacity>
-            <TouchableOpacity disabled={isProcessing || isListening} onPress={() => hacerPregunta('¿Tengo citas programadas para hoy?', 'CITAS_HOY')} style={[styles.quickBtn, { borderColor: colors.border, opacity: (isProcessing || isListening) ? 0.5 : 1 }]}>
+            <TouchableOpacity disabled={isProcessing} onPress={() => hacerPregunta('¿Tengo citas programadas para hoy?', 'CITAS_HOY')} style={[styles.quickBtn, { borderColor: colors.border, opacity: isProcessing ? 0.5 : 1 }]}>
               <CalendarDays color={colors.warning} size={20} />
               <Text style={{ color: colors.textPrimary, fontSize: typography.sm, fontWeight: 'bold', marginLeft: 8 }}>Citas Hoy</Text>
             </TouchableOpacity>
           </ScrollView>
 
-          <View style={[styles.inputWrapper, { backgroundColor: (isProcessing || isListening) ? '#f1f5f9' : colors.background, borderColor: isListening ? colors.danger : colors.border }]}>
-            <TouchableOpacity disabled={isProcessing || isListening} onPress={() => setModalModeloVisible(true)} style={[styles.modelSelector, { backgroundColor: colors.surface, opacity: (isProcessing || isListening) ? 0.5 : 1 }]}>
+          <View style={[styles.inputWrapper, { backgroundColor: isProcessing ? '#f1f5f9' : colors.background, borderColor: colors.border }]}>
+            <TouchableOpacity disabled={isProcessing} onPress={() => setModalModeloVisible(true)} style={[styles.modelSelector, { backgroundColor: colors.surface, opacity: isProcessing ? 0.5 : 1 }]}>
               {modeloIA === 'Luma Cloud' ? <Cloud color={colors.primary} size={16} /> : <Server color={colors.primary} size={16} />}
               <Text style={{ color: colors.textPrimary, fontSize: typography.xs, fontWeight: 'bold', marginHorizontal: 4 }}>{modeloIA === 'Luma Cloud' ? 'Cloud' : 'Local'}</Text>
               <ChevronDown color={colors.textSecondary} size={16} />
             </TouchableOpacity>
 
             <TextInput
-              style={[styles.textInput, { color: (isProcessing || isListening) ? colors.textSecondary : colors.textPrimary, fontSize: typography.base }]}
-              placeholder={isListening ? "Habla ahora..." : isProcessing ? "Procesando..." : "Escribe tu mensaje..."}
-              placeholderTextColor={isListening ? colors.danger : colors.textSecondary}
+              style={[styles.textInput, { color: isProcessing ? colors.textSecondary : colors.textPrimary, fontSize: typography.base }]}
+              placeholder={isProcessing ? "Procesando..." : "Escribe tu mensaje..."}
+              placeholderTextColor={colors.textSecondary}
               value={inputText}
               onChangeText={setInputText}
               multiline
               maxLength={200}
-              editable={!isListening && !isProcessing} // BLOQUEO TOTAL DEL INPUT
+              editable={!isProcessing} 
             />
 
             <View style={styles.actionRight}>
               {inputText.trim().length > 0 ? (
-                <TouchableOpacity disabled={isProcessing || isListening} onPress={() => hacerPregunta(inputText)} style={[styles.sendBtn, { backgroundColor: (isProcessing || isListening) ? colors.textSecondary : colors.primary }]}>
+                <TouchableOpacity disabled={isProcessing} onPress={() => hacerPregunta(inputText)} style={[styles.sendBtn, { backgroundColor: isProcessing ? colors.textSecondary : colors.primary }]}>
                   <Send color="#fff" size={20} />
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity disabled={isProcessing} onPress={handleMicPress} style={[styles.micBtn, { backgroundColor: isListening ? colors.danger : colors.surface, opacity: isProcessing ? 0.5 : 1 }]}>
-                  {isListening ? <Square color="#fff" size={20} fill="#fff" /> : <Mic color={colors.textPrimary} size={24} />}
+                <TouchableOpacity disabled={isProcessing} onPress={handleMicPress} style={[styles.micBtn, { backgroundColor: colors.surface, opacity: isProcessing ? 0.5 : 1 }]}>
+                  <Mic color={colors.textPrimary} size={24} />
                 </TouchableOpacity>
               )}
             </View>
