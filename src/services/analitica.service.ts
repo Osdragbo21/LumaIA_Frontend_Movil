@@ -24,6 +24,10 @@ export const obtenerMiAnaliticaCuidador = async (dias: number = 7): Promise<Anal
           cantidad
           distancia_promedio
         }
+        seguridad_dfs {
+          permitidas
+          bloqueadas
+        }
       }
     }
   `;

@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
-import { AlertCircle, TrendingUp, BrainCircuit } from 'lucide-react-native';
+import { AlertCircle, TrendingUp, BrainCircuit, ShieldAlert } from 'lucide-react-native';
 
 import { useAppTheme } from '../store/useThemeStore';
 import { obtenerMiAnaliticaCuidador } from '../services/analitica.service';
@@ -17,7 +17,7 @@ export const CuidadorEstadisticasScreen = () => {
 
   const { data: analitica, isLoading, isError } = useQuery({
     queryKey: ['analiticaCuidador'],
-    queryFn: () => obtenerMiAnaliticaCuidador(7), // Pedimos los últimos 7 días
+    queryFn: () => obtenerMiAnaliticaCuidador(7),
   });
 
   const onRefresh = useCallback(async () => {
@@ -26,25 +26,30 @@ export const CuidadorEstadisticasScreen = () => {
     setRefreshing(false);
   }, [queryClient]);
 
-  // Procesamiento de datos para Gráfico de Barras (Manhattan)
+  // 1. Datos Manhattan (Barras)
   const barData = analitica?.adherencia.map(item => {
-    // Extraemos solo el día de la fecha (ej. "2026-10-27" -> "27")
     const dia = item.fecha.split('-')[2];
     return {
       value: item.retraso_minutos,
       label: dia,
-      frontColor: item.retraso_minutos > 60 ? colors.danger : colors.primary,
+      frontColor: item.retraso_minutos > 30 ? colors.danger : colors.primary,
     };
   }) || [];
 
-  // Procesamiento de datos para Gráfico de Dona (Euclidiana)
-  const pieColors = [colors.primary, colors.warning, colors.success, colors.danger, '#8b5cf6'];
+  // 2. Datos Euclidiana (Dona)
+  const pieColors = [colors.primary, colors.warning, colors.success, '#8b5cf6'];
   const pieData = analitica?.intenciones.map((item, index) => ({
     value: item.cantidad,
     color: pieColors[index % pieColors.length],
     text: `${item.cantidad}`,
-    label: item.intencion.replace(/_/g, ' '), // Formato legible
+    label: item.intencion.replace(/_/g, ' '),
   })) || [];
+
+  // 3. Datos DFS (Pastel)
+  const dfsData = [
+    { value: analitica?.seguridad_dfs.permitidas || 0, color: colors.success, text: `${analitica?.seguridad_dfs.permitidas || 0}`, label: 'Consultas Permitidas' },
+    { value: analitica?.seguridad_dfs.bloqueadas || 0, color: colors.danger, text: `${analitica?.seguridad_dfs.bloqueadas || 0}`, label: 'Bloqueos Médicos (RD-01)' }
+  ].filter(d => d.value > 0);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -76,74 +81,65 @@ export const CuidadorEstadisticasScreen = () => {
             {/* GRÁFICA 1: DISTANCIA MANHATTAN */}
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
-                <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}>
-                  <TrendingUp color={colors.primary} size={24} />
-                </View>
+                <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}><TrendingUp color={colors.primary} size={24} /></View>
                 <View>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Adherencia Médica</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Distancia Manhattan (Retraso en minutos)</Text>
                 </View>
               </View>
-              
               {barData.length > 0 ? (
                 <View style={styles.chartContainer}>
-                  <BarChart
-                    data={barData}
-                    barWidth={28}
-                    spacing={24}
-                    roundedTop
-                    roundedBottom
-                    hideRules
-                    xAxisThickness={2}
-                    yAxisThickness={0}
-                    yAxisTextStyle={{ color: colors.textSecondary, fontSize: 12 }}
-                    noOfSections={4}
-                    maxValue={Math.max(...barData.map(d => d.value), 60)} // Mínimo 60 min en la escala
-                  />
+                  <BarChart data={barData} barWidth={28} spacing={24} roundedTop roundedBottom hideRules xAxisThickness={2} yAxisThickness={0} yAxisTextStyle={{ color: colors.textSecondary, fontSize: 12 }} noOfSections={4} maxValue={Math.max(...barData.map(d => d.value), 60)} />
                 </View>
-              ) : (
-                <Text style={styles.emptyText}>No hay registros de tomas en los últimos 7 días.</Text>
-              )}
+              ) : <Text style={styles.emptyText}>No hay registros de tomas en los últimos 7 días.</Text>}
             </View>
 
             {/* GRÁFICA 2: DISTANCIA EUCLIDIANA */}
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
-                <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}>
-                  <BrainCircuit color="#ca8a04" size={24} />
-                </View>
+                <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}><BrainCircuit color="#ca8a04" size={24} /></View>
                 <View>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Interacciones con Luma</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Distancia Euclidiana (Intenciones)</Text>
                 </View>
               </View>
-
               {pieData.length > 0 ? (
                 <View style={styles.pieContainer}>
-                  <PieChart
-                    donut
-                    data={pieData}
-                    radius={100}
-                    innerRadius={60}
-                    textColor="#ffffff"
-                    textSize={16}
-                    fontWeight="bold"
-                    showText
-                  />
+                  <PieChart donut data={pieData} radius={100} innerRadius={60} textColor="#ffffff" textSize={16} fontWeight="bold" showText />
                   <View style={styles.legendContainer}>
                     {pieData.map((item, index) => (
                       <View key={index} style={styles.legendItem}>
                         <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                        <Text style={{ color: colors.textSecondary, fontSize: typography.sm, fontWeight: 'bold' }}>
-                          {item.label}
-                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: typography.sm, fontWeight: 'bold' }}>{item.label}</Text>
                       </View>
                     ))}
                   </View>
                 </View>
-              ) : (
-                <Text style={styles.emptyText}>El paciente no ha conversado con Luma recientemente.</Text>
-              )}
+              ) : <Text style={styles.emptyText}>El paciente no ha conversado con Luma recientemente.</Text>}
+            </View>
+
+            {/* GRÁFICA 3: DFS (BLOQUEOS MÉDICOS) */}
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.iconBox, { backgroundColor: '#ffe4e6' }]}><ShieldAlert color={colors.danger} size={24} /></View>
+                <View>
+                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Auditoría de Seguridad</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Búsqueda en Profundidad (DFS - Regla RD-01)</Text>
+                </View>
+              </View>
+              {dfsData.length > 0 ? (
+                <View style={styles.pieContainer}>
+                  <PieChart data={dfsData} radius={100} textColor="#ffffff" textSize={16} fontWeight="bold" showText />
+                  <View style={styles.legendContainer}>
+                    {dfsData.map((item, index) => (
+                      <View key={index} style={styles.legendItem}>
+                        <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+                        <Text style={{ color: colors.textSecondary, fontSize: typography.sm, fontWeight: 'bold' }}>{item.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : <Text style={styles.emptyText}>No hay registros de auditoría.</Text>}
             </View>
           </>
         )}

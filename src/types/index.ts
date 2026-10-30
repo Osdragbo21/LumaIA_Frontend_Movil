@@ -58,7 +58,6 @@ export interface NotaPersonal {
     fecha_eliminacion?: string;
 }
 
-// NUEVO: Interfaces para Analítica y Matemáticas
 export interface AdherenciaManhattan {
     fecha: string;
     retraso_minutos: number;
@@ -70,7 +69,14 @@ export interface IntencionEuclidiana {
     distancia_promedio: number;
 }
 
+export interface SeguridadDFS {
+    permitidas: number;
+    bloqueadas: number;
+}
+
 export interface AnaliticaDashboard {
     adherencia: AdherenciaManhattan[];
     intenciones: IntencionEuclidiana[];
+    seguridad_dfs: SeguridadDFS;
 }
+
