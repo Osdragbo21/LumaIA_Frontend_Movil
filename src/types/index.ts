@@ -80,3 +80,46 @@ export interface AnaliticaDashboard {
     seguridad_dfs: SeguridadDFS;
 }
 
+export interface AdherenciaManhattan {
+    fecha: string;
+    retraso_minutos: number;
+}
+
+export interface IntencionEuclidiana {
+    intencion: string;
+    cantidad: number;
+    distancia_promedio: number;
+}
+
+export interface SeguridadDFS {
+    permitidas: number;
+    bloqueadas: number;
+}
+
+export interface AnaliticaDashboard {
+    adherencia: AdherenciaManhattan[];
+    intenciones: IntencionEuclidiana[];
+    seguridad_dfs: SeguridadDFS;
+    ruta_bfs_optima: string[];
+}
+
+export interface ContactoUCS {
+    nombre: string;
+    costo_minutos: number;
+    costo_acumulado: number;
+}
+
+export interface IteracionHillClimbing {
+    iteracion: number;
+    retraso_actual: number;
+    ajuste: string;
+}
+
+export interface AnaliticaDashboard {
+    adherencia: AdherenciaManhattan[];
+    intenciones: IntencionEuclidiana[];
+    seguridad_dfs: SeguridadDFS;
+    ruta_bfs_optima: string[];
+    escalamiento_ucs: ContactoUCS[]; // NUEVO
+    optimizacion_hill_climbing: IteracionHillClimbing[]; // NUEVO
+}
