@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Users, UserPlus } from 'lucide-react-native';
+import { Phone, Users, UserPlus, KeyRound } from 'lucide-react-native';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppTheme } from '../store/useThemeStore';
@@ -15,7 +15,7 @@ export const CuidadorVinculacionScreen = () => {
   const { colors, typography } = useAppTheme();
   const queryClient = useQueryClient();
   
-  const [correo, setCorreo] = useState('');
+  const [pin, setPin] = useState(''); // CAMBIO: Ahora es PIN
 
   const { data: vinculados = [], isLoading } = useQuery({
     queryKey: ['vinculadosList', usuarioId],
@@ -24,10 +24,10 @@ export const CuidadorVinculacionScreen = () => {
   });
 
   const mutVincular = useMutation({
-    mutationFn: () => vincularAdultoMayor(usuarioId!, correo.trim().toLowerCase()),
+    mutationFn: () => vincularAdultoMayor(usuarioId!, pin.trim()),
     onSuccess: () => {
       Alert.alert('Éxito', 'Paciente vinculado correctamente.');
-      setCorreo('');
+      setPin('');
       queryClient.invalidateQueries({ queryKey: ['vinculadosResumen', usuarioId] });
       queryClient.invalidateQueries({ queryKey: ['vinculadosList', usuarioId] });
     },
@@ -36,19 +36,13 @@ export const CuidadorVinculacionScreen = () => {
     }
   });
 
-  // CORRECCIÓN CRÍTICA: Función de llamadas robusta
   const hacerLlamada = (numero?: string) => {
-    if (!numero) {
-      Alert.alert('Aviso', 'El paciente no tiene un contacto de emergencia principal registrado.');
-      return;
-    }
-    
+    if (!numero) { Alert.alert('Aviso', 'El paciente no tiene un contacto de emergencia principal registrado.'); return; }
     const numeroLimpio = numero.replace(/[\s\-\(\)]/g, '');
     const url = Platform.OS === 'ios' ? `telprompt:${numeroLimpio}` : `tel:${numeroLimpio}`;
-
     Linking.openURL(url).catch((err) => {
       console.error('Error al intentar llamar', err);
-      Alert.alert('Error', 'No se pudo abrir la aplicación de teléfono. Asegúrate de estar en un dispositivo físico.');
+      Alert.alert('Error', 'No se pudo abrir la aplicación de teléfono.');
     });
   };
 
@@ -67,26 +61,26 @@ export const CuidadorVinculacionScreen = () => {
               <Text style={{ fontSize: typography.xl, fontWeight: '900', color: colors.textPrimary }}>Agregar Familiar</Text>
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: typography.base, marginBottom: 16 }}>
-              Ingresa el correo electrónico registrado por el Adulto Mayor para monitorear su agenda.
+              Ingresa el PIN de 6 dígitos generado desde el teléfono del Adulto Mayor.
             </Text>
             
             <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Mail color={colors.textSecondary} size={24} style={styles.inputIcon} />
+              <KeyRound color={colors.textSecondary} size={24} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { color: colors.textPrimary, fontSize: typography.lg }]}
-                placeholder="correo@ejemplo.com"
+                style={[styles.input, { color: colors.textPrimary, fontSize: typography.h2, letterSpacing: 4 }]}
+                placeholder="123456"
                 placeholderTextColor={colors.textSecondary}
-                value={correo}
-                onChangeText={setCorreo}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                value={pin}
+                onChangeText={setPin}
+                keyboardType="number-pad" // Teclado numérico
+                maxLength={6} // Máximo 6 dígitos
               />
             </View>
 
             <TouchableOpacity 
               style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: mutVincular.isPending ? 0.7 : 1 }]}
               onPress={() => mutVincular.mutate()}
-              disabled={mutVincular.isPending || !correo}
+              disabled={mutVincular.isPending || pin.length !== 6}
             >
               {mutVincular.isPending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: typography.lg, fontWeight: '900' }}>Vincular Cuenta</Text>}
             </TouchableOpacity>
@@ -136,7 +130,7 @@ const styles = StyleSheet.create({
   card: { padding: 20, borderRadius: 24, borderWidth: 2, marginBottom: 32 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingHorizontal: 16, minHeight: 64 },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, fontWeight: '600', minHeight: 64 },
+  input: { flex: 1, fontWeight: '900', minHeight: 64 },
   submitBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 56, borderRadius: 16, marginTop: 16 },
   sectionTitle: { fontWeight: '900', marginBottom: 16 },
   smallCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, borderWidth: 2, marginBottom: 12 },

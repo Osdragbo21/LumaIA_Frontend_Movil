@@ -1,9 +1,34 @@
 // [MÓVIL] Ruta: src/store/useAuthStore.ts
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import type { Enum_Rol } from '../types/index';
+
+// CORRECCIÓN S-09: Adaptador personalizado para cifrar los datos en móviles
+const secureStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(name);
+    }
+    return await SecureStore.getItemAsync(name);
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(name, value);
+    } else {
+      await SecureStore.setItemAsync(name, value);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(name);
+    } else {
+      await SecureStore.deleteItemAsync(name);
+    }
+  },
+};
 
 interface AuthState {
   token: string | null;
@@ -26,8 +51,8 @@ export const useAuthStore = create<AuthState>()(
     }),
     { 
       name: 'luma-auth-storage',
-      // CRÍTICO: Aquí le decimos a Zustand que use el almacenamiento nativo de React Native
-      storage: createJSONStorage(() => AsyncStorage) 
+      // Usamos nuestro adaptador cifrado en lugar de AsyncStorage
+      storage: createJSONStorage(() => secureStorage) 
     }
   )
 );

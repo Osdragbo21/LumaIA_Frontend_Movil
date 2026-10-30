@@ -57,3 +57,20 @@ export interface NotaPersonal {
     fecha_creacion: string;
     fecha_eliminacion?: string;
 }
+
+// NUEVO: Interfaces para Analítica y Matemáticas
+export interface AdherenciaManhattan {
+    fecha: string;
+    retraso_minutos: number;
+}
+
+export interface IntencionEuclidiana {
+    intencion: string;
+    cantidad: number;
+    distancia_promedio: number;
+}
+
+export interface AnaliticaDashboard {
+    adherencia: AdherenciaManhattan[];
+    intenciones: IntencionEuclidiana[];
+}
