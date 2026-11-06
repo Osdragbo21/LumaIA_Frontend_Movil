@@ -4,9 +4,8 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-// CORRECCIÓN: Importamos LineChart
 import { BarChart, PieChart, LineChart } from 'react-native-gifted-charts';
-import { AlertCircle, TrendingUp, BrainCircuit, ShieldAlert, Route, Users, Mountain } from 'lucide-react-native';
+import { AlertCircle, TrendingUp, BrainCircuit, ShieldAlert, Route, Users, Mountain, Activity, CheckCircle2, AlertOctagon } from 'lucide-react-native';
 
 import { useAppTheme } from '../store/useThemeStore';
 import { obtenerMiAnaliticaCuidador } from '../services/analitica.service';
@@ -27,37 +26,18 @@ export const CuidadorEstadisticasScreen = () => {
     setRefreshing(false);
   }, [queryClient]);
 
-  // 1. Manhattan
-  const barData = analitica?.adherencia.map(item => ({
-    value: item.retraso_minutos, label: item.fecha.split('-')[2], frontColor: item.retraso_minutos > 30 ? colors.danger : colors.primary,
-  })) || [];
-
-  // 2. Euclidiana
+  const barData = analitica?.adherencia.map(item => ({ value: item.retraso_minutos, label: item.fecha.split('-')[2], frontColor: item.retraso_minutos > 30 ? colors.danger : colors.primary })) || [];
   const pieColors = [colors.primary, colors.warning, colors.success, '#8b5cf6'];
-  const pieData = analitica?.intenciones.map((item, index) => ({
-    value: item.cantidad, color: pieColors[index % pieColors.length], text: `${item.cantidad}`, label: item.intencion.replace(/_/g, ' '),
-  })) || [];
-
-  // 3. DFS
+  const pieData = analitica?.intenciones.map((item, index) => ({ value: item.cantidad, color: pieColors[index % pieColors.length], text: `${item.cantidad}`, label: item.intencion.replace(/_/g, ' ') })) || [];
   const dfsData = [
     { value: analitica?.seguridad_dfs.permitidas || 0, color: colors.success, text: `${analitica?.seguridad_dfs.permitidas || 0}`, label: 'Consultas Permitidas' },
     { value: analitica?.seguridad_dfs.bloqueadas || 0, color: colors.danger, text: `${analitica?.seguridad_dfs.bloqueadas || 0}`, label: 'Bloqueos Médicos (RD-01)' }
   ].filter(d => d.value > 0);
+  const ucsData = analitica?.escalamiento_ucs.map(item => ({ value: item.costo_acumulado, label: item.nombre.substring(0, 8) + '...', frontColor: colors.warning, topLabelComponent: () => <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 4 }}>{item.costo_acumulado}m</Text> })) || [];
+  const hillData = analitica?.optimizacion_hill_climbing.map(item => ({ value: item.retraso_actual, label: `It ${item.iteracion}`, dataPointText: `${item.retraso_actual}m` })) || [];
 
-  // 5. UCS (Barras Horizontales)
-  const ucsData = analitica?.escalamiento_ucs.map(item => ({
-    value: item.costo_acumulado,
-    label: item.nombre.substring(0, 8) + '...', // Truncamos el nombre para que quepa
-    frontColor: colors.warning,
-    topLabelComponent: () => <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 4 }}>{item.costo_acumulado}m</Text>
-  })) || [];
-
-  // 6. Hill Climbing (Gráfico de Líneas)
-  const hillData = analitica?.optimizacion_hill_climbing.map(item => ({
-    value: item.retraso_actual,
-    label: `It ${item.iteracion}`,
-    dataPointText: `${item.retraso_actual}m`,
-  })) || [];
+  // NUEVO: Datos de Predicción
+  const ml = analitica?.prediccion_riesgo;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -130,42 +110,78 @@ export const CuidadorEstadisticasScreen = () => {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bfsContainer}>
                 {analitica?.ruta_bfs_optima.map((nodo, index) => (
                   <View key={index} style={styles.bfsNodeWrapper}>
-                    <View style={[styles.bfsNode, { backgroundColor: index === analitica.ruta_bfs_optima.length - 1 ? colors.primary : colors.surface, borderColor: colors.primary }]}>
-                      <Text style={{ color: index === analitica.ruta_bfs_optima.length - 1 ? '#fff' : colors.primary, fontWeight: 'bold', fontSize: typography.sm }}>{nodo}</Text>
-                    </View>
+                    <View style={[styles.bfsNode, { backgroundColor: index === analitica.ruta_bfs_optima.length - 1 ? colors.primary : colors.surface, borderColor: colors.primary }]}><Text style={{ color: index === analitica.ruta_bfs_optima.length - 1 ? '#fff' : colors.primary, fontWeight: 'bold', fontSize: typography.sm }}>{nodo}</Text></View>
                     {index < analitica.ruta_bfs_optima.length - 1 && <Text style={{ color: colors.textSecondary, marginHorizontal: 8 }}>→</Text>}
                   </View>
                 ))}
               </ScrollView>
             </View>
 
-            {/* 5. UCS (NUEVO) */}
+            {/* 5. UCS */}
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
                 <View style={[styles.iconBox, { backgroundColor: '#fef3c7' }]}><Users color="#d97706" size={24} /></View>
                 <View><Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Escalamiento de Emergencia</Text><Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Costo Uniforme (UCS - Tiempo de respuesta)</Text></View>
               </View>
               {ucsData.length > 0 ? (
-                <View style={styles.chartContainer}>
-                  <BarChart horizontal data={ucsData} barWidth={28} spacing={24} roundedTop roundedBottom hideRules yAxisThickness={0} xAxisThickness={2} yAxisTextStyle={{ color: colors.textSecondary, fontSize: 12 }} />
-                </View>
+                <View style={styles.chartContainer}><BarChart horizontal data={ucsData} barWidth={28} spacing={24} roundedTop roundedBottom hideRules yAxisThickness={0} xAxisThickness={2} yAxisTextStyle={{ color: colors.textSecondary, fontSize: 12 }} /></View>
               ) : <Text style={styles.emptyText}>No hay contactos registrados.</Text>}
             </View>
 
-            {/* 6. HILL CLIMBING (NUEVO) */}
+            {/* 6. HILL CLIMBING */}
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.cardHeader}>
                 <View style={[styles.iconBox, { backgroundColor: '#dcfce7' }]}><Mountain color={colors.success} size={24} /></View>
-                <View><Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Optimización de Alertas</Text><Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Hill Climbing (Minimizar retraso)</Text></View>
+                <View><Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Optimización de Alertas</Text><Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Escalada de Colinas (Minimizar retraso)</Text></View>
               </View>
               {hillData.length > 0 ? (
                 <View style={[styles.chartContainer, { paddingLeft: 10 }]}>
                   <LineChart data={hillData} color={colors.success} thickness={3} dataPointsColor={colors.success} hideRules yAxisThickness={0} xAxisThickness={2} yAxisTextStyle={{ color: colors.textSecondary, fontSize: 12 }} textFontSize={10} textColor={colors.textSecondary} />
-                  <Text style={{ color: colors.success, fontSize: typography.sm, fontWeight: 'bold', marginTop: 16, textAlign: 'center' }}>
-                    Resultado: {analitica?.optimizacion_hill_climbing[analitica.optimizacion_hill_climbing.length - 1].ajuste}
-                  </Text>
+                  <Text style={{ color: colors.success, fontSize: typography.sm, fontWeight: 'bold', marginTop: 16, textAlign: 'center' }}>Resultado: {analitica?.optimizacion_hill_climbing[analitica.optimizacion_hill_climbing.length - 1].ajuste}</Text>
                 </View>
               ) : <Text style={styles.emptyText}>No hay datos para optimizar.</Text>}
+            </View>
+
+            {/* 7. MACHINE LEARNING (NUEVO) */}
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.iconBox, { backgroundColor: '#f3e8ff' }]}><Activity color="#9333ea" size={24} /></View>
+                <View>
+                  <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>Predicción de Riesgo</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: typography.xs }}>Machine Learning (Árbol de Decisión)</Text>
+                </View>
+              </View>
+              
+              {ml ? (
+                <View style={{ gap: 16 }}>
+                  {/* Tarjeta de Regla Fija */}
+                  <View style={[styles.mlCard, { backgroundColor: ml.riesgo_regla_fija ? '#ffe4e6' : '#dcfce7', borderColor: ml.riesgo_regla_fija ? colors.danger : colors.success }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                      {ml.riesgo_regla_fija ? <AlertOctagon color={colors.danger} size={20} /> : <CheckCircle2 color={colors.success} size={20} />}
+                      <Text style={{ fontWeight: 'bold', color: ml.riesgo_regla_fija ? colors.danger : colors.success, marginLeft: 8 }}>Regla Fija Clásica</Text>
+                    </View>
+                    <Text style={{ color: colors.textPrimary, fontSize: typography.sm }}>
+                      {ml.riesgo_regla_fija ? 'Riesgo Alto de abandono del tratamiento.' : 'Riesgo Bajo. El paciente es adherente.'}
+                    </Text>
+                  </View>
+
+                  {/* Tarjeta de Machine Learning */}
+                  <View style={[styles.mlCard, { backgroundColor: ml.riesgo_machine_learning ? '#ffe4e6' : '#dcfce7', borderColor: ml.riesgo_machine_learning ? colors.danger : colors.success }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {ml.riesgo_machine_learning ? <AlertOctagon color={colors.danger} size={20} /> : <CheckCircle2 color={colors.success} size={20} />}
+                        <Text style={{ fontWeight: 'bold', color: ml.riesgo_machine_learning ? colors.danger : colors.success, marginLeft: 8 }}>Modelo ML (Scikit-Learn)</Text>
+                      </View>
+                      <View style={{ backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 100 }}>
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#9333ea' }}>{ml.exactitud_modelo_ml}% Exactitud</Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: colors.textPrimary, fontSize: typography.sm }}>
+                      {ml.riesgo_machine_learning ? 'El modelo predice un Riesgo Alto de abandono.' : 'El modelo predice un Riesgo Bajo.'}
+                    </Text>
+                  </View>
+                </View>
+              ) : <Text style={styles.emptyText}>No hay datos suficientes para predecir.</Text>}
             </View>
 
           </>
@@ -194,4 +210,5 @@ const styles = StyleSheet.create({
   bfsContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   bfsNodeWrapper: { flexDirection: 'row', alignItems: 'center' },
   bfsNode: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 2 },
+  mlCard: { padding: 16, borderRadius: 16, borderWidth: 2 }, // NUEVO
 });

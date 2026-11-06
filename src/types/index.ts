@@ -123,3 +123,32 @@ export interface AnaliticaDashboard {
     escalamiento_ucs: ContactoUCS[]; // NUEVO
     optimizacion_hill_climbing: IteracionHillClimbing[]; // NUEVO
 }
+
+export interface ContactoUCS {
+    nombre: string;
+    costo_minutos: number;
+    costo_acumulado: number;
+}
+
+export interface IteracionHillClimbing {
+    iteracion: number;
+    retraso_actual: number;
+    ajuste: string;
+}
+
+// NUEVO: Interfaz para Machine Learning
+export interface PrediccionRiesgo {
+    riesgo_regla_fija: boolean;
+    riesgo_machine_learning: boolean;
+    exactitud_modelo_ml: number;
+}
+
+export interface AnaliticaDashboard {
+    adherencia: AdherenciaManhattan[];
+    intenciones: IntencionEuclidiana[];
+    seguridad_dfs: SeguridadDFS;
+    ruta_bfs_optima: string[];
+    escalamiento_ucs: ContactoUCS[];
+    optimizacion_hill_climbing: IteracionHillClimbing[];
+    prediccion_riesgo: PrediccionRiesgo; // NUEVO
+}
