@@ -1,7 +1,7 @@
 // [MÓVIL] Ruta: src/screens/DashboardScreen.tsx
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Image, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Image, RefreshControl, Linking, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pill, Stethoscope, Check, LogOut, AlertCircle, Phone, Clock } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { useAppTheme } from '../store/useThemeStore';
 import { obtenerMedicamentos } from '../services/medicamentos.service';
 import { obtenerCitas } from '../services/citas.service';
 import { obtenerTomasHoy, confirmarToma } from '../services/registros-toma.service';
+import { obtenerPerfilUsuario } from '../services/contactos.service'; // NUEVO: Para obtener el contacto de emergencia
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { rol, usuarioId, logout } = useAuthStore();
@@ -19,43 +20,24 @@ export const DashboardScreen = ({ navigation }: any) => {
   
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleLogout = () => logout();
-
   const fechaGenerada = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
   const fechaFormateada = fechaGenerada.split(', ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(', ');
 
-  const { data: medicamentos = [], isLoading: loadMed, isError: errMed } = useQuery({
-    queryKey: ['medicamentos', usuarioId],
-    queryFn: () => obtenerMedicamentos(usuarioId!),
-    enabled: !!usuarioId,
-  });
+  // Queries
+  const { data: perfil } = useQuery({ queryKey: ['perfil', usuarioId], queryFn: () => obtenerPerfilUsuario(usuarioId!), enabled: !!usuarioId });
+  const { data: medicamentos = [], isLoading: loadMed, isError: errMed } = useQuery({ queryKey: ['medicamentos', usuarioId], queryFn: () => obtenerMedicamentos(usuarioId!), enabled: !!usuarioId });
+  const { data: citas = [], isLoading: loadCitas, isError: errCitas } = useQuery({ queryKey: ['citas', usuarioId], queryFn: () => obtenerCitas(usuarioId!), enabled: !!usuarioId });
+  const { data: tomasHoy = [], isLoading: loadTomas } = useQuery({ queryKey: ['tomasHoy', usuarioId], queryFn: () => obtenerTomasHoy(usuarioId!), enabled: !!usuarioId });
 
-  // CORRECCIÓN: El backend ya entrega solo las citas de hoy, no necesitamos filtrar en el frontend
-  const { data: citas = [], isLoading: loadCitas, isError: errCitas } = useQuery({
-    queryKey: ['citas', usuarioId],
-    queryFn: () => obtenerCitas(usuarioId!),
-    enabled: !!usuarioId,
-  });
-
-  const { data: tomasHoy = [], isLoading: loadTomas } = useQuery({
-    queryKey: ['tomasHoy', usuarioId],
-    queryFn: () => obtenerTomasHoy(usuarioId!),
-    enabled: !!usuarioId,
-  });
-
-  const idsConfirmados = new Set(tomasHoy.map((toma: any) => toma.medicamento_id));
-
+  // Mutación
   const mutationToma = useMutation({
-    mutationFn: (medicamento_id: string) => confirmarToma(medicamento_id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tomasHoy', usuarioId] });
-    }
+    mutationFn: ({ id, hora }: { id: string, hora: string }) => confirmarToma(id, hora),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tomasHoy', usuarioId] }); }
   });
 
   const isLoading = loadMed || loadCitas || loadTomas;
   const isError = errMed || errCitas;
 
-  // CORRECCIÓN: Función para el Pull-to-Refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await queryClient.invalidateQueries({ queryKey: ['medicamentos', usuarioId] });
@@ -64,18 +46,55 @@ export const DashboardScreen = ({ navigation }: any) => {
     setRefreshing(false);
   }, [queryClient, usuarioId]);
 
-  const handleConfirmarToma = (id: string) => {
-    if (!idsConfirmados.has(id)) {
-      mutationToma.mutate(id);
+  // CORRECCIÓN 1: Lógica del Botón SOS Directo
+  const handleSOS = () => {
+    const contactos = perfil?.contactos_emergencia || [];
+    if (contactos.length > 0) {
+      const numeroLimpio = contactos[0].telefono.replace(/[\s\-\(\)]/g, '');
+      const url = Platform.OS === 'ios' ? `telprompt:${numeroLimpio}` : `tel:${numeroLimpio}`;
+      Linking.openURL(url).catch(() => {
+        Alert.alert('Error', 'No se pudo abrir la aplicación de teléfono.');
+      });
+    } else {
+      Alert.alert('Aviso', 'No tienes contactos de emergencia. Ve a la pestaña Apoyo para agregar uno.');
+      navigation.navigate('Apoyo');
+    }
+  };
+
+  // CORRECCIÓN 2: Lógica de Horarios Múltiples
+  const obtenerTomaActual = (med: any) => {
+    const ahora = new Date();
+    const horaActualStr = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
+    
+    // Si no tiene horarios, devolvemos un estado por defecto
+    if (!med.horarios_especificos || med.horarios_especificos.length === 0) {
+      return { hora: "Sin horario", confirmada: tomasHoy.some(t => t.medicamento_id === med._id) };
+    }
+
+    // Buscamos qué horarios ya fueron confirmados hoy
+    const horariosConfirmados = tomasHoy
+      .filter(t => t.medicamento_id === med._id)
+      .map(t => {
+        const d = new Date(t.fecha_programada);
+        // Ajustamos la hora UTC devuelta por Mongo a la hora local (México UTC-6)
+        return `${(d.getUTCHours() - 6).toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+      });
+
+    // Buscamos el primer horario que NO haya sido confirmado
+    const proximoHorario = med.horarios_especificos.find((h: string) => !horariosConfirmados.includes(h));
+
+    if (proximoHorario) {
+      // Hay una toma pendiente
+      return { hora: proximoHorario, confirmada: false, totalConfirmadas: horariosConfirmados.length, totalTomas: med.horarios_especificos.length };
+    } else {
+      // Ya se tomaron todas las de hoy
+      return { hora: med.horarios_especificos[med.horarios_especificos.length - 1], confirmada: true, totalConfirmadas: horariosConfirmados.length, totalTomas: med.horarios_especificos.length };
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView 
-        contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
-      >
+      <ScrollView contentContainerStyle={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
         
         <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.headerLeft}>
@@ -85,12 +104,13 @@ export const DashboardScreen = ({ navigation }: any) => {
               <Text style={{ fontSize: typography.h2, fontWeight: 'bold', color: colors.textPrimary }}>{rol || 'Usuario'}</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
             <LogOut color={colors.textSecondary} size={28} />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.sosButton, { backgroundColor: colors.danger, borderBottomColor: '#9f1239' }]} onPress={() => navigation.navigate('Apoyo')} activeOpacity={0.8}>
+        {/* BOTÓN SOS DIRECTO */}
+        <TouchableOpacity style={[styles.sosButton, { backgroundColor: colors.danger, borderBottomColor: '#9f1239' }]} onPress={handleSOS} activeOpacity={0.8}>
           <View style={styles.sosIconContainer}><Phone color="#ffffff" size={28} /></View>
           <Text style={[styles.sosText, { fontSize: typography.h2 }]}>EMERGENCIA SOS</Text>
         </TouchableOpacity>
@@ -101,24 +121,19 @@ export const DashboardScreen = ({ navigation }: any) => {
         </View>
 
         {isLoading && !refreshing && (
-          <View style={[styles.emptyCard, { borderColor: colors.border }]}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={{ color: colors.textSecondary, fontSize: typography.base, marginTop: 16 }}>Preparando tu día...</Text>
-          </View>
+          <View style={[styles.emptyCard, { borderColor: colors.border }]}><ActivityIndicator size="large" color={colors.primary} /><Text style={{ color: colors.textSecondary, fontSize: typography.base, marginTop: 16 }}>Preparando tu día...</Text></View>
         )}
 
         {isError && (
-          <View style={[styles.errorCard, { backgroundColor: '#ffe4e6', borderColor: colors.danger }]}>
-            <AlertCircle color={colors.danger} size={32} />
-            <Text style={{ color: colors.danger, fontSize: typography.base, marginLeft: 12, flex: 1, fontWeight: 'bold' }}>Ocurrió un problema al cargar tu información.</Text>
-          </View>
+          <View style={[styles.errorCard, { backgroundColor: '#ffe4e6', borderColor: colors.danger }]}><AlertCircle color={colors.danger} size={32} /><Text style={{ color: colors.danger, fontSize: typography.base, marginLeft: 12, flex: 1, fontWeight: 'bold' }}>Ocurrió un problema al cargar tu información.</Text></View>
         )}
 
         {!isLoading && !isError && (
           <View style={styles.listContainer}>
             
             {medicamentos.map((med) => {
-              const isConfirmado = idsConfirmados.has(med._id);
+              const tomaActual = obtenerTomaActual(med);
+              const isConfirmado = tomaActual.confirmada;
               const cardBg = isConfirmado ? colors.successLight : colors.surface;
               const cardBorder = isConfirmado ? colors.success : colors.border;
               
@@ -128,21 +143,35 @@ export const DashboardScreen = ({ navigation }: any) => {
                     <View style={[styles.iconBox, { backgroundColor: isConfirmado ? '#bbf7d0' : colors.primaryLight }]}><Pill color={isConfirmado ? colors.success : colors.primary} size={28} /></View>
                     <View style={styles.cardInfo}>
                       <Text style={[styles.medTitle, { color: colors.textPrimary, fontSize: typography.h2, textDecorationLine: isConfirmado ? 'line-through' : 'none' }]}>{med.nombre_farmaco}</Text>
-                      <Text style={{ color: isConfirmado ? colors.success : colors.primary, fontSize: typography.lg, fontWeight: 'bold' }}>{med.horarios_especificos?.length > 0 ? `A las ${med.horarios_especificos[0]}` : `Cada ${med.frecuencia_horas} hrs`}</Text>
+                      
+                      {/* Mostrar la hora de la toma actual o la última confirmada */}
+                      <Text style={{ color: isConfirmado ? colors.success : colors.primary, fontSize: typography.lg, fontWeight: 'bold' }}>
+                        A las {tomaActual.hora}
+                      </Text>
+                      
                       <Text style={{ color: colors.textSecondary, fontSize: typography.base }}>Dosis: {med.dosis}</Text>
+                      
+                      {/* Indicador de progreso (Ej: 1 de 3 tomas) */}
+                      {tomaActual.totalTomas > 1 && (
+                        <Text style={{ color: colors.textSecondary, fontSize: typography.sm, marginTop: 4, fontWeight: 'bold' }}>
+                          Progreso hoy: {tomaActual.totalConfirmadas} de {tomaActual.totalTomas} tomas
+                        </Text>
+                      )}
                     </View>
                   </View>
 
                   <TouchableOpacity
                     disabled={isConfirmado || mutationToma.isPending}
-                    onPress={() => handleConfirmarToma(med._id)}
+                    onPress={() => mutationToma.mutate({ id: med._id, hora: tomaActual.hora })}
                     style={[styles.actionButton, { backgroundColor: isConfirmado ? colors.successLight : colors.primary, borderColor: isConfirmado ? colors.success : '#1e40af', borderBottomWidth: isConfirmado ? 2 : 4 }]}
                   >
                     {mutationToma.isPending && !isConfirmado ? (
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <>
-                        <Text style={{ color: isConfirmado ? colors.success : '#fff', fontSize: typography.lg, fontWeight: 'bold', marginRight: 8 }}>{isConfirmado ? 'Toma Confirmada' : 'Ya lo tomé'}</Text>
+                        <Text style={{ color: isConfirmado ? colors.success : '#fff', fontSize: typography.lg, fontWeight: 'bold', marginRight: 8 }}>
+                          {isConfirmado ? 'Todas las tomas completas' : 'Ya lo tomé'}
+                        </Text>
                         <Check color={isConfirmado ? colors.success : '#fff'} size={24} strokeWidth={3} />
                       </>
                     )}
@@ -151,7 +180,6 @@ export const DashboardScreen = ({ navigation }: any) => {
               );
             })}
 
-            {/* CORRECCIÓN: Usamos 'citas' directamente */}
             {citas.map((cita) => (
               <View key={cita._id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftWidth: 6, borderLeftColor: colors.warning }]}>
                 <View style={styles.cardHeader}>
