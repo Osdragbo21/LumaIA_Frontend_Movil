@@ -141,6 +141,13 @@ export interface PrediccionRiesgo {
     riesgo_regla_fija: boolean;
     riesgo_machine_learning: boolean;
     exactitud_modelo_ml: number;
+    f1_score_ml: number;
+    algoritmo_utilizado: string;
+    perfil_paciente: string;
+    coordenada_pca_x: number;
+    coordenada_pca_y: number;
+    es_comportamiento_atipico: boolean;
+    recomendaciones: string[]; // NUEVO: Arreglo de recomendaciones
 }
 
 export interface AnaliticaDashboard {

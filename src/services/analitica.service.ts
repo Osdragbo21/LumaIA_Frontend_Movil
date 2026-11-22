@@ -14,7 +14,18 @@ export const obtenerMiAnaliticaCuidador = async (dias: number = 7): Promise<Anal
         ruta_bfs_optima
         escalamiento_ucs { nombre costo_minutos costo_acumulado }
         optimizacion_hill_climbing { iteracion retraso_actual ajuste }
-        prediccion_riesgo { riesgo_regla_fija riesgo_machine_learning exactitud_modelo_ml }
+        prediccion_riesgo { 
+          riesgo_regla_fija 
+          riesgo_machine_learning 
+          exactitud_modelo_ml 
+          f1_score_ml
+          algoritmo_utilizado
+          perfil_paciente
+          coordenada_pca_x
+          coordenada_pca_y
+          es_comportamiento_atipico
+          recomendaciones
+        }
       }
     }
   `;
