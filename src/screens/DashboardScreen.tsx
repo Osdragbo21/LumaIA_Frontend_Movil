@@ -11,7 +11,8 @@ import { useAppTheme } from '../store/useThemeStore';
 import { obtenerMedicamentos } from '../services/medicamentos.service';
 import { obtenerCitas } from '../services/citas.service';
 import { obtenerTomasHoy, confirmarToma } from '../services/registros-toma.service';
-import { obtenerPerfilUsuario } from '../services/contactos.service'; // NUEVO: Para obtener el contacto de emergencia
+import { obtenerPerfilUsuario } from '../services/contactos.service';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { rol, usuarioId, logout } = useAuthStore();
@@ -22,6 +23,8 @@ export const DashboardScreen = ({ navigation }: any) => {
 
   const fechaGenerada = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
   const fechaFormateada = fechaGenerada.split(', ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(', ');
+
+  usePushNotifications();
 
   // Queries
   const { data: perfil } = useQuery({ queryKey: ['perfil', usuarioId], queryFn: () => obtenerPerfilUsuario(usuarioId!), enabled: !!usuarioId });

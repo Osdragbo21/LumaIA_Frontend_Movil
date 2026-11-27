@@ -10,12 +10,16 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useAppTheme } from '../store/useThemeStore';
 import { obtenerAdultosVinculados } from '../services/cuidador.service';
 
+import { usePushNotifications } from '../hooks/usePushNotifications';
+
 export const CuidadorDashboardScreen = () => {
   const { usuarioId, logout } = useAuthStore();
   const { colors, typography } = useAppTheme();
   const queryClient = useQueryClient();
 
   const [refreshing, setRefreshing] = useState(false);
+
+  usePushNotifications();
 
   const { data: vinculados = [], isLoading, isError } = useQuery({
     queryKey: ['vinculadosResumen', usuarioId],

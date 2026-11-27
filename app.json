@@ -3,6 +3,11 @@
     "name": "lumaia-mobile",
     "slug": "lumaia-mobile",
     "version": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "12345678-abcd-1234-abcd-1234567890ab"
+      }
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
